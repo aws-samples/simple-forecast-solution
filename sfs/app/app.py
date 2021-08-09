@@ -55,6 +55,7 @@ import gzip
 from collections import OrderedDict, deque, namedtuple
 from concurrent import futures
 from urllib.parse import urlparse
+from toolz.itertoolz import partition
 from botocore.exceptions import ClientError
 from sspipe import p, px
 from streamlit import session_state as state
@@ -71,6 +72,7 @@ from streamlit import caching
 from streamlit.uploaded_file_manager import UploadedFile
 from streamlit.script_runner import RerunException
 from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
+from joblib import Parallel, delayed
 from humanfriendly import format_timespan
 
 
@@ -136,6 +138,47 @@ def load_file(path):
         raise NotImplementedError
 
     return pd.read_csv(path, dtype={"timestamp": str}, compression=compression)
+ 
+
+def _sum(y):
+    if np.all(pd.isnull(y)):
+        return np.nan
+    return np.nansum(y)
+
+
+def _resample(df2, freq):
+    df2 = df2.groupby(["channel", "family", "item_id"]) \
+             .resample("W-MON") \
+             .demand \
+             .sum(min_count=1)
+    return df2
+
+
+def process_data(df, freq, chunksize=None):
+    """
+    """
+
+    df["timestamp"] = pd.DatetimeIndex(df["timestamp"])
+    df.set_index("timestamp", inplace=True)
+
+    groups = df.groupby(["channel", "family", "item_id"], sort=False)
+
+    if chunksize is None:
+        chunksize = min(groups.ngroups, 1000)
+
+    total = int(np.ceil(groups.ngroups / chunksize))
+
+    all_results = []
+
+    for chunk in stqdm(partition(chunksize, groups), total=total, desc="Progress"):
+        results = Parallel(n_jobs=-1)(delayed(_resample)(dd, freq) for _, dd in chunk)
+        all_results.extend(results)
+
+    df = pd.concat(all_results) \
+           .reset_index(["channel", "family", "item_id"])
+    df.index.name = None
+
+    return df
 
 
 class StreamlitExecutor(LambdaExecutor):
@@ -187,11 +230,6 @@ def run_lambdamap(df, horiz, freq, max_lambdas=1000):
 
     freq = FREQ_MAP_PD[freq]
 
-    # resample the dataset to the forecast frequency before running
-    # lambdamap
-    df2 = get_df_resampled(freq)
-    groups = df2.groupby(GROUP_COLS, as_index=False, sort=False)
-
     if freq[0] == "W":
         cv_periods = None
         cv_stride = 2 
@@ -201,27 +239,49 @@ def run_lambdamap(df, horiz, freq, max_lambdas=1000):
     else:
         raise NotImplementedError
 
-    with st.spinner(f":rocket: Launching forecasts via AWS Lambda (λ)..."):
-        # generate payload
-        for _, dd in groups:
-            payloads.append(
-                {"args": (dd, horiz, freq),
-                 "kwargs": {"metric": "smape",
-                            "cv_periods": cv_periods, "cv_stride": cv_stride}})
+    from toolz.itertoolz import partition
+    from tqdm.auto import tqdm
 
-        executor = StreamlitExecutor(max_workers=min(max_lambdas, len(payloads)),
-                                     lambda_arn=LAMBDAMAP_FUNC)
-        wait_for = executor.map(run_cv_select, payloads)
+    #with st.spinner(f":rocket: Launching forecasts via AWS Lambda (λ)..."):
+    # resample the dataset to the forecast frequency before running
+    # lambdamap
+    start = time.time()
+    df2 = get_df_resampled(df, freq)
+    print(f"completed in {format_timespan(time.time()-start)}")
+
+    groups = df2.groupby(GROUP_COLS, as_index=False, sort=False)
+
+    # generate payload
+    for _, dd in groups:
+        payloads.append(
+            {"args": (dd, horiz, freq),
+             "kwargs": {"metric": "smape",
+                        "cv_periods": cv_periods, "cv_stride": cv_stride}})
+
+    # launch jobs in chunks of 1000
+    executor = StreamlitExecutor(max_workers=min(max_lambdas, len(payloads)),
+                                 lambda_arn=LAMBDAMAP_FUNC)
+    wait_for = executor.map(run_cv_select, payloads)
+    display_progress(wait_for, "🔥 Generating forecasts")
 
     return wait_for
 
 
-def get_df_resampled(freq):
-    df = state["report"]["data"].get("df", None)
-    df2 = state["report"]["data"].get("df2", None)
+def get_df_resampled(df, freq):
+    chunksize = 1000
+    groups = df.groupby(["channel", "family", "item_id"], sort=False)
+    total = int(np.ceil(groups.ngroups / chunksize))
 
-    if df2 is None:
-        df2 = resample(df, freq)
+    all_results = []
+
+    for chunk in stqdm(partition(chunksize, groups), total=total, desc="Batch Preparation Progress"):
+        results = Parallel(n_jobs=-1)(delayed(_resample)(dd, freq) for _, dd in chunk)
+        all_results.extend(results)
+
+    df2 = pd.concat(all_results) \
+            .reset_index(["channel", "family", "item_id"])
+    df2 = _resample(df, freq).reset_index(["channel", "family", "item_id"])
+    df2.index.name = None
 
     state["report"]["data"]["df2"] = df2
 
@@ -490,7 +550,7 @@ def panel_create_report(expanded=True):
                         help="This file contains the demand history as either a `.csv` or `.csv.gz` file.")
 
             with _cols[1]:
-                freq = st.selectbox("Frequency", list(FREQ_MAP.values()),
+                freq = st.selectbox("Frequency", list(s for s in FREQ_MAP.values() if s != 'D'),
                         format_func=lambda s: FREQ_MAP_LONG[s],
                         help="This input file must contain demand history at a _daily_, _weekly_, or _monthly_ frequency.")
 
@@ -544,8 +604,10 @@ def panel_create_report(expanded=True):
 
                         # impute missing dates from the validated dataframe, this
                         # will fill in the missing timestamps with null demand values
+#                       state.report["data"]["df"] = \
+#                           load_data(df, impute_freq=state.report["data"]["freq"])
                         state.report["data"]["df"] = \
-                            load_data(df, impute_freq=state.report["data"]["freq"])
+                            process_data(df,state.report["data"]["freq"])
                         state.report["data"]["is_valid"] = True
 
                         # clear any existing data health check results, this forces
@@ -775,16 +837,30 @@ def panel_launch():
                 wait_for = \
                     run_pipeline(df, freq_in, freq_out, metric=METRIC,
                         cv_stride=2, backend="futures", horiz=horiz)
+                display_progress(wait_for, "🔥 Generating forecasts")
+                raw_results = [f.result() for f in futures.as_completed(wait_for)]
             elif backend == "lambdamap":
-                wait_for = run_lambdamap(df, horiz, freq_out)
+                with st.spinner(f":rocket: Launching forecasts via AWS Lambda (λ)..."):
+                    all_raw_results = []
+                    groups = df.groupby(["channel", "family", "item_id"], sort=False)
+
+                    chunksize = min(5000, groups.ngroups)
+
+                    # divide the dataset into chunks
+                    df["grp"] = groups.ngroup() % int(np.ceil(groups.ngroups / chunksize))
+                    groups = df.groupby("grp", sort=False)
+                    total = df["grp"].nunique()
+
+                    for _, dd in stqdm(groups, total=total, desc="Overall Progress"):
+                        wait_for = run_lambdamap(dd, horiz, freq_out)
+                        raw_results = [f.result() for f in futures.as_completed(wait_for)]
+                        all_raw_results.extend(raw_results)
+
+                    raw_results = all_raw_results
             else:
                 raise NotImplementedError
 
-            display_progress(wait_for, "🔥 Generating forecasts")
-
             with st.spinner("⏳ Calculating results ..."):
-                raw_results = [f.result() for f in futures.as_completed(wait_for)]
-
                 # generate the results and predictions as dataframes
                 df_results, df_preds, df_model_dist, best_err, naive_err = \
                     process_forecasts(wait_for, METRIC)
@@ -991,6 +1067,7 @@ def make_df_top(df, df_results, groupby_cols, dt_start, dt_stop, cperc_thresh,
     return df_grp, df_grp_summary
 
 
+@st.cache()
 def make_ml_df_top(df, df_backtests, groupby_cols, dt_start, dt_stop, cperc_thresh, metric):
     """
     """
