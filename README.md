@@ -18,10 +18,17 @@ Region name | Region code | Launch
 Asia Pacific (Sydney) | ap-southeast-2 | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://ap-southeast-2.console.aws.amazon.com/cloudformation/home?region=ap-southeast-2#/stacks/quickcreate?templateUrl=https%3A%2F%2Fsfs-public.s3.ap-southeast-2.amazonaws.com%2Ftemplate.yaml&stackName=AfaBootstrapStack&param_emailAddress=&param_instanceType=ml.t2.medium)
 
 3. Specify your email address as a cloudformation parameter (for deployment notifications).
-4. Acknowledge and Accept the cloud formation deployment
-5. Once completed, you will receive an email (approx. 15-20 mins)
-6. Click the URL link in the email which will bring you to the Landing Page (*if you see a number of tiled icons, simply click 'Landing Page' on the left navigation panel)
-7. Once at the Landing Page, you will find all instructions on how to use the Amazon Forecast Accelerator tool to validate forecast performance
+4. Acknowledge and Accept the cloud formation deployment.
+5. During the deployment, you will recieve two emails:
+   - a subscription confirmation email with the subject heading "AWS Notification - Subscription Confirmation", by clicking "Confirm subscription" 
+     in the message body, you will recieve e-mails notifying when the AFA dashboard is deployed and when ML forecasting jobs are complete.
+   - a notification e-mail containing the URL to the AFA landing page.
+6. The deployment will complete in 15-20mins, click the URL in the notification
+   e-mail, which will bring you to the AFA landing page (if you see a number of
+   tiled icons, simply double-click `Landing_Page.ipynb` on the left navigation
+   panel).
+7. Once at the Landing Page, you will find instructions on how to use the
+   Amazon Forecast Accelerator application to validate forecast performance.
 
 ## Important – AWS Resource Requirements
 
