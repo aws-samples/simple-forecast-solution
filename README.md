@@ -1,71 +1,61 @@
-# Amazon Simple Forecast Solution
+# Amazon Forecast Accelerator
 
 ![](https://img.shields.io/badge/license-MIT--0-green)
-![](https://img.shields.io/github/workflow/status/aws-samples/simple-forecast-solution/pytest/main)
 
+**Amazon Forecast Accelerator (AFA)** is an open-source application that:
 
-## One-Click Deployment
+- Enables users to run, test, and validate forecast accuracy in minutes rather than weeks,
+- Performs model selection across 75+ statistical forecasting and machine learning techniques, and
+- Exports forecasts and accuracy results as CSV files for benchmarking against existing forecast solutions.
+
+## :building_construction: Installation
+
+1. Create/Login to AWS Account (a new AWS account is recommended for simplicity and testing purposes)
+2. Click on a "Launch Stack" button below:
 
 Region name | Region code | Launch
 --- | --- | ---
 Asia Pacific (Sydney) | ap-southeast-2 | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)]()
-US West (Oregon) | us-west-2 | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)]()
-Europe (Ireland) | eu-west-1 | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)]()
 
-# :construction: Currently Refactoring :construction:
+3. Specify your email address as a cloudformation parameter (for deployment notifications).
+4. Acknowledge and Accept the cloud formation deployment
+5. Once completed, you will receive an email (approx. 15-20 mins)
+6. Click the URL link in the email which will bring you to the Landing Page (*if you see a number of tiled icons, simply click 'Landing Page' on the left navigation panel)
+7. Once at the Landing Page, you will find all instructions on how to use the Amazon Forecast Accelerator tool to validate forecast performance
 
-Hi there! refactoring of SFS is nearly complete, please watch this space!
+## Important – AWS Resource Requirements
 
-## Installation
+By default, Amazon Forecast Accelerator can process datasets of *up to 5,000 timeseries*
+(1 timeseries = unique SKU x unique Channel) and uses [default AWS service limits for EC2 and Lambda](https://console.aws.amazon.com/servicequotas/).
+*Refer to the table below for resource requirements based on # time-series in your dataset. A limit increase
+will be required for larger data sets.*
 
-### _Prerequisite_ – Install `npm` and `aws-cdk`
+| # Timeseries | SageMaker Notebbok Instance Type | # Concurrent Lambdas| [Est. Run-time](#run-time-and-pricing) | [Est. Cost per Forecast ($USD) w/ AWS Free-Tier](#run-time-and-pricing) | [Est. Cost per Forecast ($USD) w/o AWS Free-Tier](#run-time-and-pricing) |
+|---|---|---|---|---|---|
+| 1–5,000       | ml.t2.medium (default) | 1,000 (default)        | 1–5 mins (default)  | <$0.10       | <$0.30      |
+|               |                        | 10,000[<sup>*</sup>](#upgrades-and-limit-increases)                 | 10s–1 min           | <$0.10       | <$0.30      |
+| 5,000–10,000  | ml.t3.xlarge[<sup>*</sup>](#upgrades-and-limit-increases)             | 1,000 (default)        | 5–15min (default)   | <$0.10       | $0.30–$1.70 |
+|               |                        | 10,000[<sup>*</sup>](#upgrades-and-limit-increases)                   | 30s–1.5 min         | <$0.10       | $0.30–$1.70 |
+| 10,000–50,000 | ml.t3.2xlarge[<sup>*</sup>](#upgrades-and-limit-increases)            | 1,000 (default)        | 15–45min (default)  | <$0.10–$2.00 | $1.70–$9.00 |
+|               |                        | 10,000[<sup>*</sup>](#upgrades-and-limit-increases)                   | 30s–1.5 min         | <$0.10–$2.00 | $1.70–$9.00 |
+| 50,000–100,000 | ml.m4.4xlarge[<sup>*</sup>](#upgrades-and-limit-increases)           | 1,000 (default)        | 45+ min (default)  | $2.00–$10.00+ | $9.00–$16.80+ |
+|                |                       | 10,000[<sup>*</sup>](#upgrades-and-limit-increases)                   | 5+ min             | $2.00–$10.00+ | $9.00–$16.80+ |
 
-```bash
-# Install npm
-curl -L https://git.io/n-install | bash
-source ~/.bashrc
+### <sup>*</sup>Upgrades and Limit Increases
 
-# Install aws-cdk
-npm i -g aws-cdk@1.114.0
-```
+A limit increase request is required to process larger datasets, which can be made in one of two ways:
+- Self-Service (~24-48hr):
+  - Request a SageMaker Notebook Instance type limit increase [here](https://aws.amazon.com/premiumsupport/knowledge-center/resourcelimitexceeded-sagemaker/).
+  - Request an AWS Lambda concurrency limit increase via the instructions [here](https://docs.aws.amazon.com/servicequotas/latest/userguide/request-quota-increase.html)
+- Contact your AWS Account Manager (instant approval for SageMaker Notebook Instance type limit increass only)
 
-### _Prerequisite_ – Install `lambdamap`
+### Run-time and Pricing
 
-```bash
-# Clone the lambdamap repository
-git clone https://github.com/aws-samples/lambdamap.git
-cd ./lambdamap/
-pip install -q -e .
+These estimates are for the **statistical forecasting models only** and were based on datasets with
+three years of historical (weekly) demand for each time-series. The machine learning model run-time and costs
+are defined by the Amazon Forecast service and take longer to train (typically hours). Please refer to the
+[Amazon Forecast pricing](https://aws.amazon.com/forecast/pricing/) example for expected costs.
 
-cd ./lambdamap_cdk/
-pip install -q -r ./requirements.txt
-
-# Deploy the lambdamap stack
-cdk deploy \
-    --context function_name=SfsLambdaMapFunction \
-    --context extra_cmds='pip install -q git+https://github.com/aws-samples/simple-forecast-solution.git#egg=sfs'
-```
-
-### Install SFS
-
-```bash
-# Clone the SFS git repository
-git clone https://github.com/aws-samples/simple-forecast-solution.git
-
-# Install the SFS library
-cd simple-forecast-solution
-pip3 install -e .
-```
-
-## Run the app (locally)
-
-The app will be accessible from your web browser at `http://localhost:8051`
-```bash
-cd ./sfs/app/
-streamlit run ./app.py
-```
-
-## Run the app (via SageMaker Notebook instance)
-```bash
-# TODO
-```
+The frequency of the data (e.g. daily, weekly, monthly) significantly impacts the run-time. Datasets
+containing monthly demand will yield the fastest run-times and can typically run using smaller SageMaker Notebook Instance types
+when compared to weekly or daily demand data with the same number of time-series.
