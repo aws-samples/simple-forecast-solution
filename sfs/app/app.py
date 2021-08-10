@@ -41,6 +41,7 @@ import re
 import json
 import logging
 import gzip
+import gc
 
 import boto3
 import numpy as np
@@ -2114,6 +2115,7 @@ if __name__ == "__main__":
 
     if clear_report_btn:
         state.pop("report")
+        gc.collect()
 
     if "report" not in state:
         state["report"] = {"data": {}, "sfs": {}, "afc": {}}

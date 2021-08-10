@@ -17,7 +17,9 @@ setuptools.setup(
         "awswrangler",
         "sspipe",
         "humanfriendly",
-        "streamlit-aggrid"
+        "streamlit-aggrid",
+        "joblib",
+        "toolz"
     ],
     python_requires=">=3.8",
     classifiers=[
