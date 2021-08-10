@@ -124,11 +124,11 @@ class BootstrapStack(cdk.Stack):
                 --context stack_name=AfaLambdaMapStack \
                 --context function_name=AfaLambdaMapFunction \
                 --context memory_size=256 \
-                --context extra_cmds='git clone https://github.com/aws-samples/simple-forecast-solution.git ; cd ./simple-forecast-solution/ ; git checkout develop ; pip install -e .'
+                --context extra_cmds='git clone https://github.com/aws-samples/simple-forecast-solution.git ; cd ./simple-forecast-solution/ ; git checkout main ; pip install -e .'
 
             git clone https://github.com/aws-samples/simple-forecast-solution.git
             cd ./simple-forecast-solution
-            git checkout develop
+            git checkout main
             cd ./cdk
             python -m pip install --upgrade pip
             pip install -q -r ./requirements.txt

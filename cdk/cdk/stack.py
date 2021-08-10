@@ -441,7 +441,7 @@ class AfaStack(cdk.Stack):
         # install sfs (required by the dashboard code)
         git clone https://github.com/aws-samples/simple-forecast-solution.git
         cd ./simple-forecast-solution ;
-        git checkout develop
+        git checkout main
         pip install -q -e .
 
         # install lambdamap (required by the dashboard code)
