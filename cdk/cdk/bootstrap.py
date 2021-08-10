@@ -23,7 +23,7 @@ class BootstrapStack(cdk.Stack):
 
         ec2_role = iam.Role(
             self,
-            "SfsInstanceRole",
+            "AfaInstanceRole",
             assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"),
             managed_policies=[
                 iam.ManagedPolicy.from_aws_managed_policy_name("IAMFullAccess"),
@@ -116,13 +116,13 @@ class BootstrapStack(cdk.Stack):
             # install the aws-cdk cli tool (req. for running `cdk deploy ...`)
             npm i -g aws-cdk@1.116.0
 
-            # deploy the SfsLambdaMapStack (required by the dashboard code)
+            # deploy the AfaLambdaMapStack (required by the dashboard code)
             git clone https://github.com/aws-samples/lambdamap.git
             cd ./lambdamap/lambdamap_cdk/
             pip install -q -r ./requirements.txt
             cdk deploy --require-approval never \
-                --context stack_name=SfsLambdaMapStack \
-                --context function_name=SfsLambdaMapFunction \
+                --context stack_name=AfaLambdaMapStack \
+                --context function_name=AfaLambdaMapFunction \
                 --context memory_size=256 \
                 --context extra_cmds='git clone https://github.com/aws-samples/simple-forecast-solution.git ; cd ./simple-forecast-solution/ ; git checkout develop ; pip install -e .'
 
@@ -134,9 +134,9 @@ class BootstrapStack(cdk.Stack):
             pip install -q -r ./requirements.txt
 
             cdk bootstrap
-            cdk deploy SfsStack \
-                --parameters SfsStack:emailAddress={email_address} \
-                --parameters SfsStack:instanceType={instance_type} \
+            cdk deploy AfaStack \
+                --parameters AfaStack:emailAddress={email_address} \
+                --parameters AfaStack:instanceType={instance_type} \
                 --require-approval never
 
             EOF

@@ -1,14 +1,16 @@
 # vim: set fdm=indent:
 '''
-   _____ _                 __                            
-  / ___/(_)___ ___  ____  / /__                          
-  \__ \/ / __ `__ \/ __ \/ / _ \                         
- ___/ / / / / / / / /_/ / /  __/                         
-/____/_/_/ /_/ /_/ .___/_/\___/           __             
-   / ____/___  _/_/____  _________ ______/ /_            
+    ___                                                  
+   /   |  ____ ___  ____ _____  ____  ____               
+  / /| | / __ `__ \/ __ `/_  / / __ \/ __ \              
+ / ___ |/ / / / / / /_/ / / /_/ /_/ / / / /              
+/_/  |_/_/ /_/ /_/\__,_/ /___/\____/_/ /_/               
+    ______                                __             
+   / ____/___  ________  _________ ______/ /_            
   / /_  / __ \/ ___/ _ \/ ___/ __ `/ ___/ __/            
  / __/ / /_/ / /  /  __/ /__/ /_/ (__  ) /_              
-/_/ ___\____/_/   \___/\___/\__,_/____/\__/__            
+/_/    \____/_/   \___/\___/\__,_/____/\__/              
+    ___                  __                __            
    /   | _____________  / /__  _________ _/ /_____  _____
   / /| |/ ___/ ___/ _ \/ / _ \/ ___/ __ `/ __/ __ \/ ___/
  / ___ / /__/ /__/  __/ /  __/ /  / /_/ / /_/ /_/ / /    
@@ -24,7 +26,7 @@ USAGE:
 OPTIONS:
     --local-dir LOCAL_DIR       /path/to/ a local directory from which the UI
                                 will look for files.
-    --landing-page-url URL      URL of the SFA landing page
+    --landing-page-url URL      URL of the AFA landing page
 
 '''
 import os
@@ -62,7 +64,7 @@ from sspipe import p, px
 from streamlit import session_state as state
 from textwrap import dedent
 from stqdm import stqdm
-from sfs import (load_data, resample, run_pipeline, run_cv_select,
+from afa import (load_data, resample, run_pipeline, run_cv_select,
     calc_smape, calc_wape,
     make_demand_classification, process_forecasts, make_perf_summary,
     make_health_summary, GROUP_COLS, EXP_COLS)
@@ -79,7 +81,7 @@ from humanfriendly import format_timespan
 
 ST_STATIC_PATH = pathlib.Path(st.__path__[0]).joinpath("static")
 ST_DOWNLOADS_PATH = ST_STATIC_PATH.joinpath("downloads")
-LAMBDAMAP_FUNC = "SfsLambdaMapFunction"
+LAMBDAMAP_FUNC = "AfaLambdaMapFunction"
 LOCAL_DIR = "/home/ec2-user/SageMaker"
 
 if not os.path.exists(ST_DOWNLOADS_PATH):
@@ -426,7 +428,7 @@ def save_report(report_fn):
 
         # upload the report to s3
         s3_path = \
-            f'{state["report"]["sfs"]["s3_sfs_reports_path"]}/{report_fn}'
+            f'{state["report"]["afa"]["s3_afa_reports_path"]}/{report_fn}'
 
         parsed_url = urlparse(s3_path, allow_fragments=False)
         bucket = parsed_url.netloc
@@ -579,7 +581,7 @@ def panel_create_report(expanded=True):
 
             if report_name == "":
                 now_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-                report_name = f"SfsReport_{now_str}"
+                report_name = f"AfaReport_{now_str}"
 
             if report_name != "" and re.match(r"^[A-Za-z0-9-_]*$", report_name) is None:
                 st.error(dedent("""
@@ -789,8 +791,8 @@ def panel_launch():
 
     df = state.report["data"].get("df", None)
     df_health = state.report["data"].get("df_health", None)
-    horiz = state.report["sfs"].get("horiz", None)
-    freq = state.report["sfs"].get("freq", None)
+    horiz = state.report["afa"].get("horiz", None)
+    freq = state.report["afa"].get("freq", None)
 
     if df is None or df_health is None:
         return
@@ -806,7 +808,7 @@ def panel_launch():
         This process typically completes at a rate of 500–1,000 timeseries/min.
         """)
 
-        with st.form("sfs_form"):
+        with st.form("afa_form"):
             with st.beta_container():
                 _cols = st.beta_columns(3)
 
@@ -827,13 +829,13 @@ def panel_launch():
             start = time.time()
 
             # save form data
-            state.report["sfs"]["freq"] = freq
-            state.report["sfs"]["horiz"] = horiz
-            state.report["sfs"]["backend"] = backend
+            state.report["afa"]["freq"] = freq
+            state.report["afa"]["horiz"] = horiz
+            state.report["afa"]["backend"] = backend
 
             df = state.report["data"]["df"]
             freq_in = state.report["data"]["freq"]
-            freq_out = state.report["sfs"]["freq"]
+            freq_out = state.report["afa"]["freq"]
 
             if backend == "local":
                 wait_for = \
@@ -871,15 +873,15 @@ def panel_launch():
                 df_demand_cln = make_demand_classification(df, freq_in)
 
             # save results and forecast data
-            state.report["sfs"]["df_results"] = df_results
-            state.report["sfs"]["df_preds"] = df_preds
-            state.report["sfs"]["df_demand_cln"] = df_demand_cln
-            state.report["sfs"]["df_model_dist"] = df_model_dist
-            state.report["sfs"]["best_err"] = best_err
-            state.report["sfs"]["naive_err"] = naive_err
-            state.report["sfs"]["job_duration"] = time.time() - start
+            state.report["afa"]["df_results"] = df_results
+            state.report["afa"]["df_preds"] = df_preds
+            state.report["afa"]["df_demand_cln"] = df_demand_cln
+            state.report["afa"]["df_model_dist"] = df_model_dist
+            state.report["afa"]["best_err"] = best_err
+            state.report["afa"]["naive_err"] = naive_err
+            state.report["afa"]["job_duration"] = time.time() - start
 
-        job_duration = state.report["sfs"].get("job_duration", None)
+        job_duration = state.report["afa"].get("job_duration", None)
 
         if job_duration:
             st.text(f"(completed in {format_timespan(job_duration)})")
@@ -892,13 +894,13 @@ def panel_accuracy():
     """
 
     df = state.report["data"].get("df", None)
-    df_demand_cln = state.report["sfs"].get("df_demand_cln", None)
-    df_results = state.report["sfs"].get("df_results", None)
-    df_model_dist = state["report"]["sfs"].get("df_model_dist", None)
-    best_err = state["report"]["sfs"].get("best_err", None)
-    naive_err = state["report"]["sfs"].get("naive_err", None)
-    horiz = state.report["sfs"].get("horiz", None)
-    freq_out = state.report["sfs"].get("freq", None)
+    df_demand_cln = state.report["afa"].get("df_demand_cln", None)
+    df_results = state.report["afa"].get("df_results", None)
+    df_model_dist = state["report"]["afa"].get("df_model_dist", None)
+    best_err = state["report"]["afa"].get("best_err", None)
+    naive_err = state["report"]["afa"].get("naive_err", None)
+    horiz = state.report["afa"].get("horiz", None)
+    freq_out = state.report["afa"].get("freq", None)
 
     if df is None or df_results is None or df_model_dist is None:
         return
@@ -1149,10 +1151,10 @@ def panel_top_performers():
     """
 
     df = state.report["data"].get("df", None)
-    df_demand_cln = state.report["sfs"].get("df_demand_cln", None)
-    df_results = state.report["sfs"].get("df_results", None)
-    horiz = state.report["sfs"].get("horiz", None)
-    freq_out = state.report["sfs"].get("freq", None)
+    df_demand_cln = state.report["afa"].get("df_demand_cln", None)
+    df_results = state.report["afa"].get("df_results", None)
+    horiz = state.report["afa"].get("horiz", None)
+    freq_out = state.report["afa"].get("freq", None)
 
     if df is None or df_results is None:
         return
@@ -1215,8 +1217,8 @@ def panel_top_performers():
                 # write the dataframe to s3
                 now_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
                 basename = os.path.basename(state["report"]["data"]["path"])
-                s3_sfs_export_path = state["report"]["sfs"]["s3_sfs_export_path"]
-                s3_path = f'{s3_sfs_export_path}/{basename}_{now_str}_sfs-top-performers.csv.gz'
+                s3_afa_export_path = state["report"]["afa"]["s3_afa_export_path"]
+                s3_path = f'{s3_afa_export_path}/{basename}_{now_str}_afa-top-performers.csv.gz'
 
                 wr.s3.to_csv(df_grp, s3_path, compression="gzip", index=False)
 
@@ -1236,14 +1238,14 @@ def panel_visualization():
     """
 
     df = state.report["data"].get("df", None)
-    df_results = state.report["sfs"].get("df_results", None)
-    df_preds = state.report["sfs"].get("df_preds", None)
+    df_results = state.report["afa"].get("df_results", None)
+    df_preds = state.report["afa"].get("df_preds", None)
 
     if df is None or df_results is None or df_preds is None:
         return
 
-    freq = state.report["sfs"]["freq"]
-    horiz = state.report["sfs"]["horiz"]
+    freq = state.report["afa"]["freq"]
+    horiz = state.report["afa"]["horiz"]
     start = time.time()
 
     df_top = df.groupby(["channel", "family", "item_id"], as_index=False) \
@@ -1436,8 +1438,8 @@ def panel_downloads():
 
     df = state.report["data"].get("df", None)
 
-    df_results = state.report["sfs"].get("df_results", None)
-    df_preds = state.report["sfs"].get("df_preds", None)
+    df_results = state.report["afa"].get("df_results", None)
+    df_preds = state.report["afa"].get("df_preds", None)
 
     df_results = state.report["afc"].get("df_results", None)
     df_preds = state.report["afc"].get("df_preds", None)
@@ -1451,37 +1453,37 @@ def panel_downloads():
         """)
 
         # use cached forecast files if previously generated
-        sfs_forecasts_s3_path = state.report["sfs"].get("forecasts_s3_path", None)
-        sfs_backtests_s3_path = state.report["sfs"].get("backtests_s3_path", None)
+        afa_forecasts_s3_path = state.report["afa"].get("forecasts_s3_path", None)
+        afa_backtests_s3_path = state.report["afa"].get("backtests_s3_path", None)
 
         afc_forecasts_s3_path = state.report["afc"].get("forecasts_s3_path", None)
         afc_backtests_s3_path = state.report["afc"].get("backtests_s3_path", None)
 
         export_forecasts_btn = \
-            st.button("Export Statistical Forecasts", key="sfs_export_forecast_btn")
+            st.button("Export Statistical Forecasts", key="afa_export_forecast_btn")
 
         if export_forecasts_btn:
             start = time.time()
 
-            s3_sfs_export_path = state["report"]["sfs"]["s3_sfs_export_path"]
+            s3_afa_export_path = state["report"]["afa"]["s3_afa_export_path"]
 
             with st.spinner(":hourglass_flowing_sand: Exporting Forecasts ..."):
                 # export the forecast file to s3 if it doesnt exist
-                if sfs_forecasts_s3_path is None:
+                if afa_forecasts_s3_path is None:
                     now_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
                     basename = os.path.basename(state["report"]["data"]["path"])
-                    sfs_forecasts_s3_path = \
-                        f'{s3_sfs_export_path}/{basename}_{now_str}_sfs-forecasts.csv.gz'
+                    afa_forecasts_s3_path = \
+                        f'{s3_afa_export_path}/{basename}_{now_str}_afa-forecasts.csv.gz'
 
-                    wr.s3.to_csv(df_preds, sfs_forecasts_s3_path,
+                    wr.s3.to_csv(df_preds, afa_forecasts_s3_path,
                                  compression="gzip", index=False)
 
-                    state["report"]["sfs"]["forecasts_s3_path"] = \
-                        sfs_forecasts_s3_path
+                    state["report"]["afa"]["forecasts_s3_path"] = \
+                        afa_forecasts_s3_path
                 else:
                     pass
 
-                forecasts_signed_url = create_presigned_url(sfs_forecasts_s3_path)
+                forecasts_signed_url = create_presigned_url(afa_forecasts_s3_path)
 
             st.markdown("#### Statistical Forecasts")
             st.markdown("####")
@@ -1493,21 +1495,21 @@ def panel_downloads():
 
             with st.spinner(":hourglass_flowing_sand: Exporting Backtests ..."):
                 # export the forecast file to s3 if it doesnt exist
-                if sfs_backtests_s3_path is None:
+                if afa_backtests_s3_path is None:
                     now_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
                     basename = os.path.basename(state["report"]["data"]["path"])
-                    sfs_backtests_s3_path = \
-                        f'{s3_sfs_export_path}/{basename}_{now_str}_sfs-backtests.csv.gz'
+                    afa_backtests_s3_path = \
+                        f'{s3_afa_export_path}/{basename}_{now_str}_afa-backtests.csv.gz'
 
-                    wr.s3.to_csv(df_preds, sfs_backtests_s3_path,
+                    wr.s3.to_csv(df_preds, afa_backtests_s3_path,
                                  compression="gzip", index=False)
 
-                    state["report"]["sfs"]["backtests_s3_path"] = \
-                        sfs_backtests_s3_path
+                    state["report"]["afa"]["backtests_s3_path"] = \
+                        afa_backtests_s3_path
                 else:
                     pass
 
-                backtests_signed_url = create_presigned_url(sfs_backtests_s3_path)
+                backtests_signed_url = create_presigned_url(afa_backtests_s3_path)
 
             st.info(textwrap.dedent(f"""
             Download the forecast backtests file [here]({backtests_signed_url})  
@@ -1993,16 +1995,16 @@ def run_ml_state_machine():
 
     # generate a unique prefix for the Amazon Forecast resources
     now_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    prefix = f"SfsAfc{now_str}"
+    prefix = f"AfaAfc{now_str}"
 
     # get the state machine arn and s3 paths
     ssm_client = boto3.client("ssm")
     state_machine_arn = \
-        ssm_client.get_parameter(Name="SfsAfcStateMachineArn")["Parameter"]["Value"]
+        ssm_client.get_parameter(Name="AfaAfcStateMachineArn")["Parameter"]["Value"]
     s3_input_path = \
-        ssm_client.get_parameter(Name="SfsS3InputPath")["Parameter"]["Value"].rstrip("/")
+        ssm_client.get_parameter(Name="AfaS3InputPath")["Parameter"]["Value"].rstrip("/")
     s3_output_path = \
-        ssm_client.get_parameter(Name="SfsS3OutputPath")["Parameter"]["Value"].rstrip("/")
+        ssm_client.get_parameter(Name="AfaS3OutputPath")["Parameter"]["Value"].rstrip("/")
 
     # generate amazon forecast compatible data
     with st.spinner("Launching Amazon Forecast job ..."):
@@ -2088,13 +2090,13 @@ if __name__ == "__main__":
 
     parser.add_argument("--lambdamap-function", type=str,
         help="ARN/name of the lambdamap function",
-        default="SfsLambdaMapFunction")
+        default="AfaLambdaMapFunction")
 
     parser.add_argument("--landing-page-url", type=str,
-        help="URL of the SFS landing page", default="#")
+        help="URL of the AFA landing page", default="#")
 
     parser.add_argument("--max-lambdas", type=int,
-        help="URL of the SFS landing page", default=MAX_LAMBDAS)
+        help="URL of the AFA landing page", default=MAX_LAMBDAS)
 
     args = parser.parse_args()
 
@@ -2111,7 +2113,7 @@ if __name__ == "__main__":
     #
     # Sidebar
     #
-    st.sidebar.title("Amazon Simple Forecast Accelerator")
+    st.sidebar.title("Amazon Forecast Accelerator")
     st.sidebar.markdown(textwrap.dedent("""
     - [source code @ github](https://github.com/aws-samples/simple-forecast-solution)
     """))
@@ -2123,26 +2125,26 @@ if __name__ == "__main__":
         gc.collect()
 
     if "report" not in state:
-        state["report"] = {"data": {}, "sfs": {}, "afc": {}}
+        state["report"] = {"data": {}, "afa": {}, "afc": {}}
 
     # populate state global variables from ssm
     ssm_client = boto3.client("ssm")
 
     if "s3_afc_export_path" not in state["report"]["afc"]:
         state["report"]["afc"]["s3_afc_export_path"] = \
-            ssm_client.get_parameter(Name="SfsS3OutputPath")["Parameter"]["Value"].rstrip("/")
+            ssm_client.get_parameter(Name="AfaS3OutputPath")["Parameter"]["Value"].rstrip("/")
 
     if "s3_bucket" not in state["report"]:
         state["report"]["s3_bucket"] = \
-            ssm_client.get_parameter(Name="SfsS3Bucket")["Parameter"]["Value"].strip("/")
+            ssm_client.get_parameter(Name="AfaS3Bucket")["Parameter"]["Value"].strip("/")
 
-    if "s3_sfs_export_path" not in state["report"]:
-        state["report"]["sfs"]["s3_sfs_export_path"] = \
-            f's3://{state["report"]["s3_bucket"]}/sfs-exports'
+    if "s3_afa_export_path" not in state["report"]:
+        state["report"]["afa"]["s3_afa_export_path"] = \
+            f's3://{state["report"]["s3_bucket"]}/afa-exports'
 
-    if "s3_sfs_reports_path" not in state["report"]:
-        state["report"]["sfs"]["s3_sfs_reports_path"] = \
-            f's3://{state["report"]["s3_bucket"]}/sfs-reports'
+    if "s3_afa_reports_path" not in state["report"]:
+        state["report"]["afa"]["s3_afa_reports_path"] = \
+            f's3://{state["report"]["s3_bucket"]}/afa-reports'
 
     if "s3_afc_export_path" not in state["report"]:
         state["report"]["afc"]["s3_afc_export_path"] = \
@@ -2157,7 +2159,6 @@ if __name__ == "__main__":
     #
     # Main page
     #
-    #st.subheader("Amazon Simple Forecast Accelerator")
 
     panel_create_report(expanded=True)
     panel_load_report(expanded=False)

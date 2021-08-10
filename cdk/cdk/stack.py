@@ -19,7 +19,7 @@ from aws_cdk import (
 PWD = os.path.dirname(os.path.realpath(__file__))
 
 
-class SfsStack(cdk.Stack):
+class AfaStack(cdk.Stack):
     def __init__(self, scope: cdk.Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
@@ -30,7 +30,7 @@ class SfsStack(cdk.Stack):
         #
         # S3 Bucket
         #
-        bucket = s3.Bucket(self, "SfsBucket", auto_delete_objects=True,
+        bucket = s3.Bucket(self, "AfaBucket", auto_delete_objects=True,
             removal_policy=core.RemovalPolicy.DESTROY,
             bucket_name=f"{construct_id.lower()}-{self.account}-{self.region}")
 
@@ -38,19 +38,19 @@ class SfsStack(cdk.Stack):
         # SSM Parameter Store
         #
         ssm_s3_input_path_param = ssm.StringParameter(self,
-                "SfsSsmS3Bucket",
+                "AfaSsmS3Bucket",
                 string_value=bucket.bucket_name,
-                parameter_name="SfsS3Bucket")
+                parameter_name="AfaS3Bucket")
 
         ssm_s3_input_path_param = ssm.StringParameter(self,
-                "SfsSsmS3InputPath",
+                "AfaSsmS3InputPath",
                 string_value=f"s3://{bucket.bucket_name}/input/",
-                parameter_name="SfsS3InputPath")
+                parameter_name="AfaS3InputPath")
 
         ssm_s3_output_path_param = ssm.StringParameter(self,
-                "SfsSsmS3OutputPath",
+                "AfaSsmS3OutputPath",
                 string_value=f"s3://{bucket.bucket_name}/afc-exports/",
-                parameter_name="SfsS3OutputPath")
+                parameter_name="AfaS3OutputPath")
 
         #
         # SNS topic for email notification
@@ -392,15 +392,15 @@ class SfsStack(cdk.Stack):
                                  .next(sns_afc_email_step)
 
         state_machine = sfn.StateMachine(self,
-            "SfsSsmAfcStateMachine",
+            "AfaSsmAfcStateMachine",
             state_machine_name=f"{construct_id}-AfcStateMachine",
             definition=definition,
             timeout=core.Duration.hours(24))
 
         ssm_state_machine_param = ssm.StringParameter(self,
-            "SfsSsmAfcStateMachineArn",
+            "AfaSsmAfcStateMachineArn",
             string_value=state_machine.state_machine_arn,
-            parameter_name="SfsAfcStateMachineArn")
+            parameter_name="AfaAfcStateMachineArn")
 
     def make_nb_lcc_oncreate(self, construct_id):
         """Make the OnCreate script of the lifecycle configuration
@@ -494,18 +494,18 @@ class SfsStack(cdk.Stack):
         DASHBOARD_URL=$NOTEBOOK_URL/proxy/8501/
 
         # Get the instructions ipynb notebook URL (email to user)
-        LANDING_PAGE_URL=https://$NOTEBOOK_URL/lab/tree/SFS_Landing_Page.ipynb
+        LANDING_PAGE_URL=https://$NOTEBOOK_URL/lab/tree/Landing_Page.ipynb
 
         cd ~/SageMaker/simple-forecast-solution/
 
-        # update w/ the latest SFA code
+        # update w/ the latest AFA code
         git reset --hard
         git pull --all
 
         cp -rp ./cdk/workspace/* ~/SageMaker/
 
         # Update the url in the landing page
-        sed -i 's|INSERT_URL_HERE|https:\/\/'$DASHBOARD_URL'|' ~/SageMaker/SFS_Landing_Page.ipynb
+        sed -i 's|INSERT_URL_HERE|https:\/\/'$DASHBOARD_URL'|' ~/SageMaker/Landing_Page.ipynb
 
         #
         # start the streamlit demo  on port 8501 of the notebook instance,
@@ -577,17 +577,17 @@ class SfsStack(cdk.Stack):
             client = boto3.client("sns")
             response = client.publish(
                 TopicArn=os.environ["TOPIC_ARN"],
-                Subject="Your Amazon SFS Dashboard is Ready!",
+                Subject="Your AFA Dashboard is Ready!",
                 Message=textwrap.dedent(f'''
                 Congratulations!
                 
-                Amazon SFS has been successfully deployed into your AWS account.
+                Amazon Forecast Accelerator (AFA) has been successfully deployed into your AWS account.
                 
                 Visit the landing page below to get started:
                 ‣ {landing_page_url}
                 
                 Sincerely,
-                The Amazon SFS Team
+                The Amazon Forecast Accelerator Team
                 ‣ https://github.com/aws-samples/simple-forecast-solution
                 '''))
             
@@ -617,17 +617,17 @@ class SfsStack(cdk.Stack):
 
             response = client.publish(
                 TopicArn=os.environ["TOPIC_ARN"],
-                Subject="[Amazon SFA] Your ML Forecast job has completed!",
+                Subject="[AFA] Your ML Forecast job has completed!",
                 Message=dedent(f'''
                 Hi!
 
-                Your SFA Machine Learning Forecast job has completed.
+                Your AFA Machine Learning Forecast job has completed.
 
                 You can then download the forecast files using the "Export Machine Learning Forecasts"
                 button in the "Machine Learning Forecasts" section of your report via the dashboard.
 
                 Sincerely,
-                The Amazon SFA Team
+                The Amazon Forecast Accelerator Team
                 ‣ https://github.com/aws-samples/simple-forecast-solution
                 '''))
             return response

@@ -33,7 +33,7 @@ def update_status_json(resp, state, path):
 
 
 def handler(event, context):
-    """Reshape the Amazon Forecast csv files to SFS format.
+    """Reshape the Amazon Forecast csv files to AFA format.
 
     """
 

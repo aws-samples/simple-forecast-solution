@@ -10,23 +10,23 @@ from aws_cdk import core as cdk
 # being updated to use `cdk`.  You may delete this import if you don't need it.
 from aws_cdk import core
 
-from cdk.stack import SfsStack
+from cdk.stack import AfaStack
 from cdk.bootstrap import BootstrapStack
 
 PWD = os.path.dirname(os.path.realpath(__file__))
 
 app = core.App()
 
-stack_name = app.node.try_get_context("sfs_stack_name")
+stack_name = app.node.try_get_context("afa_stack_name")
 boot_stack_name = app.node.try_get_context("boot_stack_name")
 
 if stack_name is None:
-    stack_name = "SfsStack"
+    stack_name = "AfaStack"
 
 if boot_stack_name is None:
-    boot_stack_name = "SfsBootstrapStack"
+    boot_stack_name = "AfaBootstrapStack"
 
-stack = SfsStack(app, stack_name)
+stack = AfaStack(app, stack_name)
 boot_stack = BootstrapStack(app, boot_stack_name)
 
 app.synth()

@@ -19,21 +19,21 @@ INSTANCE_TYPE:=ml.t2.medium
 .PHONY: ./cdk/bootstrap.py
 
 # Deploy the SFS stack
-deploy: SfsStack
+deploy: AfaStack
 
 destroy:
 	cd cdk ; cdk destroy --all
 
 # Generate the bootstrap cloudformation YAML template
 template.yaml: ./cdk/bootstrap.py
-	( cd cdk ; cdk synth SfsBootstrapStack ) > $@
+	( cd cdk ; cdk synth AfaBootstrapStack ) > $@
 
-SfsStack:
+AfaStack:
 	cd cdk ; \
 		cdk deploy $@ --parameters $@:emailAddress=${EMAIL} \
 		--parameters $@:instanceType=${INSTANCE_TYPE}
 
-SfsBootstrapStack:
+AfaBootstrapStack:
 	cd cdk ; \
 		cdk deploy $@ --parameters $@:emailAddress=${EMAIL} \
 		--parameters $@:instanceType=${INSTANCE_TYPE}
