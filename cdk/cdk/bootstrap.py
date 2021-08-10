@@ -124,6 +124,7 @@ class BootstrapStack(cdk.Stack):
             # deploy the AfaLambdaMapStack (required by the dashboard code)
             git clone https://github.com/aws-samples/lambdamap.git
             cd ./lambdamap/lambdamap_cdk/
+            cdk bootstrap aws://{self.account}/{self.region}
             pip install -q -r ./requirements.txt
             cdk deploy --require-approval never \
                 --context stack_name=AfaLambdaMapStack \
