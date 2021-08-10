@@ -102,6 +102,7 @@ FREQ_MAP_PD = {
 }
 
 METRIC = "smape"
+MAX_LAMBDAS = 1000
 
 
 def validate(df):
@@ -223,7 +224,7 @@ def display_progress(wait_for, desc=None):
     return
 
 
-def run_lambdamap(df, horiz, freq, max_lambdas=1000):
+def run_lambdamap(df, horiz, freq):
     """
     """
 
@@ -260,7 +261,7 @@ def run_lambdamap(df, horiz, freq, max_lambdas=1000):
                         "cv_periods": cv_periods, "cv_stride": cv_stride}})
 
     # launch jobs in chunks of 1000
-    executor = StreamlitExecutor(max_workers=min(max_lambdas, len(payloads)),
+    executor = StreamlitExecutor(max_workers=min(MAX_LAMBDAS, len(payloads)),
                                  lambda_arn=LAMBDAMAP_FUNC)
     wait_for = executor.map(run_cv_select, payloads)
     display_progress(wait_for, "🔥 Generating forecasts")
@@ -2092,8 +2093,13 @@ if __name__ == "__main__":
     parser.add_argument("--landing-page-url", type=str,
         help="URL of the SFS landing page", default="#")
 
+    parser.add_argument("--max-lambdas", type=int,
+        help="URL of the SFS landing page", default=MAX_LAMBDAS)
 
     args = parser.parse_args()
+
+    global MAX_LAMBDAS
+    MAX_LAMBDAS = args.max_lambdas
 
     assert(os.path.exists(os.path.expanduser(args.local_dir)))
 
