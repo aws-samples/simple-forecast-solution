@@ -17,7 +17,7 @@ class BootstrapStack(cdk.Stack):
 
         email_address = core.CfnParameter(self, "emailAddress").value_as_string
         instance_type = core.CfnParameter(self, "instanceType",
-            default="ml.t3.xlarge").value_as_string
+            default="ml.t2.medium").value_as_string
 
         vpc = ec2.Vpc(self, f"{construct_id}-Vpc", max_azs=1)
 
