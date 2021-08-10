@@ -27,8 +27,10 @@ Asia Pacific (Sydney) | ap-southeast-2 | [![Launch Stack](https://cdn.rawgit.com
    e-mail, which will bring you to the AFA landing page (if you see a number of
    tiled icons, simply double-click `Landing_Page.ipynb` on the left navigation
    panel).
-7. Once at the Landing Page, you will find instructions on how to use the
-   Amazon Forecast Accelerator application to validate forecast performance.
+7. When arriving at the landing page, you may be presented with the prompt
+   "Select Kernel"–simply click "Select"–which will keep the default selection.
+   The Landing Page contains instructions on how to use the Amazon Forecast
+   Accelerator application to generate forecasts and validate their performance.
 
 ## Important – AWS Resource Requirements
 
