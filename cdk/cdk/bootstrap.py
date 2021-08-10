@@ -15,9 +15,14 @@ class BootstrapStack(cdk.Stack):
     def __init__(self, scope: cdk.Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        email_address = core.CfnParameter(self, "emailAddress").value_as_string
+        email_address = core.CfnParameter(self, "emailAddress",
+                description="(Required) An e-mail address with which to receive "
+                "deployment notifications.")
+
         instance_type = core.CfnParameter(self, "instanceType",
-            default="ml.t2.medium").value_as_string
+                default="ml.t2.medium",
+                description="(Required) SageMaker Notebook instance type on which to host "
+                "the AFA dashboard (e.g. ml.t2.medium, ml.t3.xlarge, ml.t3.2xlarge, ml.m4.4xlarge)")
 
         vpc = ec2.Vpc(self, f"{construct_id}-Vpc", max_azs=1)
 
