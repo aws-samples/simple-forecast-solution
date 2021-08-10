@@ -2098,7 +2098,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    global MAX_LAMBDAS
     MAX_LAMBDAS = args.max_lambdas
 
     assert(os.path.exists(os.path.expanduser(args.local_dir)))
