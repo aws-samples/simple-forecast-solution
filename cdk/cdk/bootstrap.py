@@ -83,9 +83,7 @@ class BootstrapStack(cdk.Stack):
         user_data = ec2.UserData.for_linux()
         user_data.add_commands(
             dedent(f"""
-            set -x -v +e
-            whoami
-            pwd
+            set -x -v -e
 
             # install git
             yum install -y git
@@ -96,11 +94,6 @@ class BootstrapStack(cdk.Stack):
             systemctl start docker
             usermod -aG docker ec2-user 
             setfacl --modify user:ec2-user:rw /var/run/docker.sock
-
-            sudo -u ec2-user -i <<'EOF'
-            #!/bin/bash
-            set -x -v +e
-            unset SUDO_UID
 
             # install miniconda into ~/SageMaker/miniconda, which will make it
             # persistent
@@ -121,31 +114,29 @@ class BootstrapStack(cdk.Stack):
             conda activate py39
 
             # install the aws-cdk cli tool (req. for running `cdk deploy ...`)
-            npm i -g aws-cdk@1.116.0
-
-            ( cdk bootstrap aws://{self.account}/{self.region} || true )
+            npm i -g aws-cdk@1.116.0 &>/dev/null
 
             # deploy the AfaLambdaMapStack (required by the dashboard code)
             git clone https://github.com/aws-samples/lambdamap.git
             cd ./lambdamap/lambdamap_cdk/
-            pip install -q -r ./requirements.txt
-            cdk deploy --require-approval never \
+            pip install -r ./requirements.txt
+            cdk bootstrap aws://{self.account}/{self.region} &>/dev/null
+            nohup cdk deploy --require-approval never \
                 --context stack_name=AfaLambdaMapStack \
                 --context function_name=AfaLambdaMapFunction \
                 --context memory_size=256 \
-                --context extra_cmds='git clone https://github.com/aws-samples/simple-forecast-solution.git ; cd ./simple-forecast-solution/ ; git checkout main ; pip install -e .'
+                --context extra_cmds='git clone https://github.com/aws-samples/simple-forecast-solution.git ; cd ./simple-forecast-solution/ ; git checkout main ; pip install -e .' &
 
             git clone https://github.com/aws-samples/simple-forecast-solution.git
             cd ./simple-forecast-solution
             git checkout main
             cd ./cdk
-            python -m pip install --upgrade pip
-            pip install -q -r ./requirements.txt
-            cdk deploy AfaStack \
+            pip install -r ./requirements.txt
+            cdk bootstrap aws://{self.account}/{self.region} &>/dev/null
+            nohup cdk deploy AfaStack \
                 --parameters AfaStack:emailAddress={email_address.value_as_string} \
                 --parameters AfaStack:instanceType={instance_type.value_as_string} \
-                --require-approval never
-            EOF
+                --require-approval never &
             """)
         )
 
