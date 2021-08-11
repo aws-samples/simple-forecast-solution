@@ -80,9 +80,10 @@ class BootstrapStack(cdk.Stack):
             "ap-southeast-2": "ami-0aab712d6363da7f9"
         })
 
-        user_data = ec2.UserData.for_linux(shebang="#!/bin/bash")
+        user_data = ec2.UserData.for_linux()
         user_data.add_commands(
             dedent(f"""
+            set -x -v +e
             whoami
             pwd
 
@@ -96,8 +97,9 @@ class BootstrapStack(cdk.Stack):
             usermod -aG docker ec2-user 
             setfacl --modify user:ec2-user:rw /var/run/docker.sock
 
-            time sudo -u ec2-user -i <<'EOF'
+            sudo -u ec2-user -i <<'EOF'
             #!/bin/bash
+            set -x -v +e
             unset SUDO_UID
 
             # install miniconda into ~/SageMaker/miniconda, which will make it
@@ -121,11 +123,12 @@ class BootstrapStack(cdk.Stack):
             # install the aws-cdk cli tool (req. for running `cdk deploy ...`)
             npm i -g aws-cdk@1.116.0
 
+            ( cdk bootstrap aws://{self.account}/{self.region} || true )
+
             # deploy the AfaLambdaMapStack (required by the dashboard code)
             git clone https://github.com/aws-samples/lambdamap.git
             cd ./lambdamap/lambdamap_cdk/
             pip install -q -r ./requirements.txt
-            cdk bootstrap aws://{self.account}/{self.region}
             cdk deploy --require-approval never \
                 --context stack_name=AfaLambdaMapStack \
                 --context function_name=AfaLambdaMapFunction \
@@ -138,15 +141,11 @@ class BootstrapStack(cdk.Stack):
             cd ./cdk
             python -m pip install --upgrade pip
             pip install -q -r ./requirements.txt
-            cdk bootstrap aws://{self.account}/{self.region}
             cdk deploy AfaStack \
                 --parameters AfaStack:emailAddress={email_address.value_as_string} \
                 --parameters AfaStack:instanceType={instance_type.value_as_string} \
                 --require-approval never
-
             EOF
-
-            shutdown -h now
             """)
         )
 
