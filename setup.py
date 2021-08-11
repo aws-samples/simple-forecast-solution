@@ -1,9 +1,9 @@
 import setuptools
 
 setuptools.setup(
-    name="sfs",
+    name="afa",
     version="0.2.0",
-    packages=setuptools.find_packages(where="sfs"),
+    packages=["afa"],
     install_requires=[
         "statsmodels>=0.12.2",
         "pandas>=1.2.4,<1.3.0",

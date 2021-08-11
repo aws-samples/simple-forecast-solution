@@ -997,7 +997,7 @@ def run_cv_select(df, horiz, freq, metric="smape", cv_stride=3,
     # get the forecast from the best model
     yhat = df_results.iloc[0]["yhat"]
     yhat_ts = pd.date_range(df.index.max(),
-                            periods=len(yhat)+1, freq=freq, closed="right")
+                     periods=len(yhat)+1, freq=freq, closed="right")[:len(yhat)]
     
     # get the timeseries indices of the horizons
     df_horiz = df.iloc[-1].index
