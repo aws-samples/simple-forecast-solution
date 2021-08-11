@@ -124,8 +124,8 @@ class BootstrapStack(cdk.Stack):
             # deploy the AfaLambdaMapStack (required by the dashboard code)
             git clone https://github.com/aws-samples/lambdamap.git
             cd ./lambdamap/lambdamap_cdk/
-            cdk bootstrap aws://{self.account}/{self.region}
             pip install -q -r ./requirements.txt
+            cdk bootstrap aws://{self.account}/{self.region}
             cdk deploy --require-approval never \
                 --context stack_name=AfaLambdaMapStack \
                 --context function_name=AfaLambdaMapFunction \
@@ -138,8 +138,7 @@ class BootstrapStack(cdk.Stack):
             cd ./cdk
             python -m pip install --upgrade pip
             pip install -q -r ./requirements.txt
-
-            cdk bootstrap
+            cdk bootstrap aws://{self.account}/{self.region}
             cdk deploy AfaStack \
                 --parameters AfaStack:emailAddress={email_address} \
                 --parameters AfaStack:instanceType={instance_type} \
