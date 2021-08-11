@@ -140,8 +140,8 @@ class BootstrapStack(cdk.Stack):
             pip install -q -r ./requirements.txt
             cdk bootstrap aws://{self.account}/{self.region}
             cdk deploy AfaStack \
-                --parameters AfaStack:emailAddress={email_address} \
-                --parameters AfaStack:instanceType={instance_type} \
+                --parameters AfaStack:emailAddress={email_address.value_as_string} \
+                --parameters AfaStack:instanceType={instance_type.value_as_string} \
                 --require-approval never
 
             EOF
