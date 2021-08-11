@@ -152,7 +152,7 @@ def _sum(y):
 
 def _resample(df2, freq):
     df2 = df2.groupby(["channel", "family", "item_id"]) \
-             .resample("W-MON") \
+             .resample(freq) \
              .demand \
              .sum(min_count=1)
     return df2
