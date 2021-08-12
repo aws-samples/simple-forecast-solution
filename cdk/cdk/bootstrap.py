@@ -16,13 +16,15 @@ class BootstrapStack(cdk.Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         email_address = core.CfnParameter(self, "emailAddress",
+                allowed_pattern=".+",
                 description="(Required) An e-mail address with which to receive "
                 "deployment notifications.")
 
-        instance_type = core.CfnParameter(self, "instanceType",
-                default="ml.t2.medium",
-                description="(Required) SageMaker Notebook instance type on which to host "
-                "the AFA dashboard (e.g. ml.t2.medium, ml.t3.xlarge, ml.t3.2xlarge, ml.m4.4xlarge)")
+        #   instance_type = core.CfnParameter(self, "instanceType",
+        #           default="ml.t2.medium",
+        #           description="(Required) SageMaker Notebook instance type on which to host "
+        #           "the AFA dashboard (e.g. ml.t2.medium, ml.t3.xlarge, ml.t3.2xlarge, ml.m4.4xlarge)")
+        instance_type = "ml.t2.medium"
 
         vpc = ec2.Vpc(self, f"{construct_id}-Vpc", max_azs=1)
 
@@ -135,7 +137,7 @@ class BootstrapStack(cdk.Stack):
             cdk bootstrap aws://{self.account}/{self.region} &>/dev/null
             nohup cdk deploy AfaStack \
                 --parameters AfaStack:emailAddress={email_address.value_as_string} \
-                --parameters AfaStack:instanceType={instance_type.value_as_string} \
+                --parameters AfaStack:instanceType={instance_type} \
                 --require-approval never &
             """)
         )
