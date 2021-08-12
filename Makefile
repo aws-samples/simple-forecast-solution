@@ -35,5 +35,4 @@ AfaStack:
 
 AfaBootstrapStack:
 	cd cdk ; \
-		cdk deploy $@ --parameters $@:emailAddress=${EMAIL} \
-		--parameters $@:instanceType=${INSTANCE_TYPE}
+		cdk deploy $@ --parameters $@:emailAddress=${EMAIL}
