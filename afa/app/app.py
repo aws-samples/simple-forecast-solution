@@ -1441,10 +1441,10 @@ def panel_downloads():
     df_results = state.report["afa"].get("df_results", None)
     df_preds = state.report["afa"].get("df_preds", None)
 
-    df_results = state.report["afc"].get("df_results", None)
-    df_preds = state.report["afc"].get("df_preds", None)
+    df_afc_results = state.report["afc"].get("df_results", None)
+    df_afc_preds = state.report["afc"].get("df_preds", None)
 
-    if df is None or df_results is None or df_preds is None:
+    if df is None or df_results is None or (df_preds is None and df_afc_preds is None):
         return
 
     with st.beta_expander("⬇️ Export Forecasts", expanded=True):
