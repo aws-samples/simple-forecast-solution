@@ -251,6 +251,9 @@ Resources:
               - sagemaker:UpdateNotebookInstanceLifecycleConfig
               - sagemaker:CreateNotebookInstance
               - sagemaker:UpdateNotebookInstance
+              - sagemaker:AddTags
+              - sagemaker:DeleteTags
+              - sagemaker:ListTags
             Effect: Allow
             Resource:
               - Fn::Join:
