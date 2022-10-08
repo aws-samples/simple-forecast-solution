@@ -10,7 +10,7 @@ setuptools.setup(
         "numpy>=1.20.0",
         "scipy>=1.6.0",
         "tqdm",
-        "streamlit==0.85.1",
+        "streamlit==1.11.1",
         "stqdm",
         "cloudpickle==1.6.0",
         "plotly",
