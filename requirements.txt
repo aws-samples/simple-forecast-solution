@@ -17,7 +17,6 @@ jedi
 pandas
 fsspec
 s3fs
-awswrangler
 seaborn
 tqdm
 aws-sam-cli
