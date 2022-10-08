@@ -1,0 +1,7 @@
+name: afa
+dependencies:
+  - python=3.9
+  - nodejs
+  - pip
+  - pip:
+    - -r requirements.txt
