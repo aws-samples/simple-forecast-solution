@@ -39,3 +39,6 @@ ${STACK_NAME}: template.yaml .venv
 			instanceType=${INSTANCE_TYPE}
 
 deploy: ${STACK_NAME}
+
+deploy-cdk:
+	cdk deploy -a 'python -B app.py' ${STACK_NAME}
