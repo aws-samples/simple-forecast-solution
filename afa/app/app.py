@@ -73,7 +73,6 @@ from lambdamap import LambdaExecutor, LambdaFunction
 from awswrangler.exceptions import NoFilesFound
 from streamlit import caching
 from streamlit.uploaded_file_manager import UploadedFile
-from streamlit.script_runner import RerunException
 from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 from joblib import Parallel, delayed
 from humanfriendly import format_timespan
