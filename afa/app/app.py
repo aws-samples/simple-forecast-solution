@@ -532,7 +532,7 @@ def panel_create_report(expanded=True):
 
     st.markdown("## Create Report")
 
-    with st.beta_expander("⬆️  Load + Validate Data", expanded=expanded):
+    with st.expander("⬆️  Load + Validate Data", expanded=expanded):
         st.write(f"""Step 1 – Create a new forecast report by selecting an uploaded
         file containing the demand history for your use-case. You must also specify
         the frequency of the demand (e.g. _Daily_, _Weekly_, or _Monthly_). Demand
@@ -546,7 +546,7 @@ def panel_create_report(expanded=True):
             report_name = st.text_input("Report Name (optional)",
                 help="You may optionally give this report a name, otherwise one will be automatically generated.")
 
-            _cols = st.beta_columns([3,1])
+            _cols = st.columns([3,1])
 
             with _cols[0]:
                 fn = file_selectbox(
@@ -645,14 +645,14 @@ def panel_load_report(expanded=True):
 
     st.markdown("## Load Report")
 
-    with st.beta_expander("📂 Load Report", expanded=expanded):
+    with st.expander("📂 Load Report", expanded=expanded):
         st.write(f"""Optional – Alternatively, you can load a previously-generated
         report. Report files must have the `.pkl.gz` file extension and can be uploaded
         using the [SageMaker Notebook interface]({state["landing_page_url"]}).""")
 
         report_source = st.radio("Source", ["local"], format_func=format_func)
 
-        _cols = st.beta_columns([3,1])
+        _cols = st.columns([3,1])
 
         with _cols[0]:
             if report_source == "local":
@@ -694,7 +694,7 @@ def panel_data_health():
 
     st.header("Data Health")
 
-    with st.beta_expander("❤️ Data Health", expanded=True):
+    with st.expander("❤️ Data Health", expanded=True):
         st.write(f"""Step 2 – Inspect the characteristics of the dataset
                   for irregularities prior to generating any forecasts. For example,
                   missing channels, families, item IDs; or unusually short/long
@@ -741,8 +741,8 @@ def panel_data_health():
         pc_missing = \
             df_health["demand_missing_dates"].sum() / df_health["demand_len"].sum()
 
-        with st.beta_container():
-            _cols = st.beta_columns(3)
+        with st.container():
+            _cols = st.columns(3)
 
             with _cols[0]:
                 st.markdown("#### Summary")
@@ -799,7 +799,7 @@ def panel_launch():
 
     st.header("Statistical Forecasts")
 
-    with st.beta_expander("🚀 Launch", expanded=True):
+    with st.expander("🚀 Launch", expanded=True):
         st.write(f"""Step 3 – Generate forecasts by training and evaluating 75+
         configurations of [statistical forecasting
         models](https://otexts.com/fpp3/) for each timeseries in
@@ -809,8 +809,8 @@ def panel_launch():
         """)
 
         with st.form("afa_form"):
-            with st.beta_container():
-                _cols = st.beta_columns(3)
+            with st.container():
+                _cols = st.columns(3)
 
                 with _cols[0]:
                     horiz = st.number_input("Horizon Length", value=1, min_value=1)
@@ -922,7 +922,7 @@ def panel_accuracy():
                        .apply(lambda dd: _calc_metrics(dd, METRIC)) \
                        .rename({None: METRIC}, axis=1)
 
-    with st.beta_expander("🎯 Forecast Summary", expanded=True):
+    with st.expander("🎯 Forecast Summary", expanded=True):
         _write(f"""
         Step 4 – The forecast error is calculated as the [symmetric
         mean absolute percentage error
@@ -949,7 +949,7 @@ def panel_accuracy():
         df_cln["frac"] *= 100
         df_cln["frac"] = df_cln["frac"].astype(int)
 
-        _cols = st.beta_columns(3)
+        _cols = st.columns(3)
 
         with _cols[0]:
             st.markdown("#### Parameters")
@@ -1159,7 +1159,7 @@ def panel_top_performers():
     if df is None or df_results is None:
         return
 
-    with st.beta_expander("🏆 Top Performers", expanded=True):
+    with st.expander("🏆 Top Performers", expanded=True):
         _write(f"""
         Step 5 – Inspect the forecast
         accuracy of individual channels, families, and item IDs (and each subset
@@ -1171,7 +1171,7 @@ def panel_top_performers():
 
         st.write("#### Filters")
 
-        _cols = st.beta_columns([2,1,1])
+        _cols = st.columns([2,1,1])
 
         dt_min = df.index.min()
         dt_max = df.index.max()
@@ -1260,14 +1260,14 @@ def panel_visualization():
     family_index = family_vals.index(df_top["family"].iloc[0])
     item_id_index = item_id_vals.index(df_top["item_id"].iloc[0])
 
-    with st.beta_expander("👁️  Visualization", expanded=True):
+    with st.expander("👁️  Visualization", expanded=True):
         _write(f"""
         Step 6 – Plot the historic, backtest, and forecasted demand for each 
         timeseries.
         """)
         with st.form("viz_form"):
             st.markdown("#### Filter By")
-            _cols = st.beta_columns(3)
+            _cols = st.columns(3)
 
             with _cols[0]:
                 channel_choice = st.selectbox("Channel", channel_vals, index=channel_index)
@@ -1451,7 +1451,7 @@ def panel_downloads():
     if df is None or df_results is None or (df_preds is None and df_afc_preds is None):
         return
 
-    with st.beta_expander("⬇️ Export Forecasts", expanded=True):
+    with st.expander("⬇️ Export Forecasts", expanded=True):
         _write(f"""
         Export the forecasts and backtests as `.csv.gz` files.
         """)
@@ -1618,7 +1618,7 @@ def panel_downloads():
                 `(completed in {format_timespan(time.time()-start)})`.  
                 """))
 
-    with st.beta_expander("ℹ️ Export File Formats", expanded=True):
+    with st.expander("ℹ️ Export File Formats", expanded=True):
         st.write(dedent("""
         #### Common columns
 
@@ -1693,10 +1693,10 @@ def panel_ml_launch():
 
     st.header("Machine Learning Forecasts")
 
-    with st.beta_expander("🚀 Launch", expanded=True):
+    with st.expander("🚀 Launch", expanded=True):
         st.write("_Optional_ – Launch machine learning forecasts using the [Amazon Forecast](https://aws.amazon.com/forecast/) managed service.")
         with st.form("ml_form"):
-            _cols = st.beta_columns(3)
+            _cols = st.columns(3)
 
             with _cols[0]:
                 horiz = st.number_input("Horizon Length", key="ml_horiz_input",
@@ -1760,7 +1760,7 @@ def panel_ml_launch():
                     state["report"]["afc"]["df_results"] = df_results
                     state["report"]["afc"]["df_backtests"] = df_backtests
 
-            _cols = st.beta_columns([2,0.485])
+            _cols = st.columns([2,0.485])
 
             with _cols[1]:
                 ml_stop_button = st.button("🛑 Stop Job")
@@ -1810,11 +1810,11 @@ def panel_ml_forecast_summary():
         df_preds is None:
         return
 
-    with st.beta_expander("🎯 Forecast Summary", expanded=True):
+    with st.expander("🎯 Forecast Summary", expanded=True):
         df_accuracies = calc_afc_ml_accuracies(METRIC)
         ml_acc = df_accuracies["acc"].mean()
 
-        _cols = st.beta_columns([3,1])
+        _cols = st.columns([3,1])
 
         with _cols[0]:
             st.write(dedent(f"""
@@ -1853,7 +1853,7 @@ def panel_ml_top_performers():
 
     df_backtests = state.report["afc"]["df_backtests"]
 
-    with st.beta_expander("🏆 Top Performers", expanded=True):
+    with st.expander("🏆 Top Performers", expanded=True):
         _write(f"""
         Inspect the forecast accuracy of individual channels,
         families, and item IDs (and each subset combination therein) for
@@ -1867,7 +1867,7 @@ def panel_ml_top_performers():
         dt_min = df_backtests["timestamp"].min()
         dt_max = df_backtests["timestamp"].max()
 
-        _cols = st.beta_columns([2,1,1])
+        _cols = st.columns([2,1,1])
 
         with _cols[0]:
             groupby_cols = st.multiselect("Group By",
@@ -1957,10 +1957,10 @@ def panel_ml_visualization():
     family_index = family_vals.index(df_top["family"].iloc[0])
     item_id_index = item_id_vals.index(df_top["item_id"].iloc[0])
 
-    with st.beta_expander("👁️  Visualization", expanded=True):
+    with st.expander("👁️  Visualization", expanded=True):
         with st.form("ml_viz_form"):
             st.markdown("#### Filter By")
-            _cols = st.beta_columns(3)
+            _cols = st.columns(3)
 
             with _cols[0]:
                 channel_choice = st.selectbox("Channel", channel_vals, index=channel_index, key="ml_results_channel")
@@ -2250,7 +2250,7 @@ if __name__ == "__main__":
            "df" not in state["report"]["data"]:
            return
 
-        with st.beta_expander("💾 Save Report", expanded=True):
+        with st.expander("💾 Save Report", expanded=True):
             _write(f"""
             Save this report for future use, note that the filename must have the `.pkl.gz`
             file extension. You can then re-load the report using the [Load Report](#load-report) form.
