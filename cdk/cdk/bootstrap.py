@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 import os
 
+import aws_cdk as core
+
 from textwrap import dedent
+from constructs import Construct
 from aws_cdk import (
-    core,
-    core as cdk,
+    Stack,
     aws_lambda as lambda_,
     aws_iam as iam,
     aws_codebuild as codebuild,
@@ -35,8 +37,8 @@ def lambda_handler(event, context):
 """)
 
 
-class BootstrapStack(core.Stack):
-    def __init__(self, scope: cdk.Construct, construct_id: str, **kwargs) -> None:
+class BootstrapStack(Stack):
+    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         """
         """
         super().__init__(scope, construct_id)
@@ -262,7 +264,7 @@ class BootstrapStack(core.Stack):
                 codebuild_project_id,
                 environment=codebuild.BuildEnvironment(
                     privileged=True,
-                    build_image=codebuild.LinuxBuildImage.AMAZON_LINUX_2_3
+                    build_image=codebuild.LinuxBuildImage.AMAZON_LINUX_2_4
                 ),
                 environment_variables={
                     "LAMBDAMAP_STACK_NAME": codebuild.BuildEnvironmentVariable(value=LAMBDAMAP_STACK_NAME),
