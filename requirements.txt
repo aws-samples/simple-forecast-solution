@@ -1,13 +1,6 @@
 aws-cdk-lib==2.45.0
 constructs>=10.0.0,<11.0.0
 aws-sam-cli
-ipython
-pytest
-jupyterlab
-ipywidgets
-ipympl
-jupyterlab-theme-hale
-jedi
 pandas
 fsspec
 s3fs
@@ -15,5 +8,4 @@ seaborn
 tqdm
 aws-sam-cli
 pandera
-tox
 -e .

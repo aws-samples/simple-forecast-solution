@@ -1,0 +1,9 @@
+jupyterlab
+ipython
+pytest
+jupyterlab
+ipywidgets
+ipympl
+jupyterlab-theme-hale
+jedi
+tox
