@@ -41,4 +41,5 @@ ${STACK_NAME}: template.yaml .venv
 deploy: ${STACK_NAME}
 
 deploy-cdk:
-	cdk deploy -a 'python -B app.py' ${STACK_NAME}
+	cdk deploy -a 'python -B app.py' ${STACK_NAME} \
+		--parameters emailAddress=${EMAIL}
