@@ -71,7 +71,7 @@ repos:
             .bandit.yaml|
             .yamllint.yaml|
             .checkov.yaml|
-            .environment.yml|
+            environment.yml|
             .tox|
             .venv|
             .nenv|
