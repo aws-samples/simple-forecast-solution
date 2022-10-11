@@ -59,24 +59,24 @@ repos:
           - --configfile
           - .bandit.yaml
 
-  # - repo: https://github.com/stelligent/cfn_nag
-  #   rev: v0.8.10
-  #   hooks:
-  #     - id: cfn-nag
-  #       files: .*\.(yaml|yml)$
-  #       exclude: >
-  #         (?x)^(
-  #           .pre-commit-config.yaml|
-  #           .gitlab-ci.yml|
-  #           .bandit.yaml|
-  #           .yamllint.yaml|
-  #           .checkov.yaml|
-  #           .tox|
-  #           .venv|
-  #           .nenv|
-  #           cdk.out|
-  #           ddk.out
-  #         )
+  - repo: https://github.com/stelligent/cfn_nag
+    rev: v0.8.10
+    hooks:
+      - id: cfn-nag
+        files: .*\.(yaml|yml)$
+        exclude: >
+          (?x)^(
+            .pre-commit-config.yaml|
+            .gitlab-ci.yml|
+            .bandit.yaml|
+            .yamllint.yaml|
+            .checkov.yaml|
+            .tox|
+            .venv|
+            .nenv|
+            cdk.out|
+            ddk.out
+          )
 
   - repo: https://github.com/bridgecrewio/checkov.git
     rev: 2.0.1041
