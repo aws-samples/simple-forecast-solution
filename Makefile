@@ -1,7 +1,7 @@
 export SHELL
 SHELL:=/bin/bash
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-EMAIL:=
+EMAIL:=user@example.com
 INSTANCE_TYPE:=ml.t2.medium
 BRANCH:=main
 
@@ -53,8 +53,7 @@ deploy: build/template.yaml .venv
 		${CDK_TAGS}
 
 # Deploy the ui stack
-deploy-ui: cdk/app.py .venv
-	source $(word 2, $^)/bin/activate ; \
+deploy-ui: cdk/app.py
 	cdk deploy -a 'python3 -B $<' ${AFA_STACK_NAME} \
 		--require-approval never \
 		--parameters ${AFA_STACK_NAME}:emailAddress=${EMAIL} \

@@ -286,7 +286,7 @@ class BootstrapStack(Stack):
             "export AWS_ACCOUNT_ID=$(aws sts get-caller-identity "
             "--query Account --output text)",
             "export BOOTSTRAP_URL=aws://$AWS_ACCOUNT_ID/$AWS_DEFAULT_REGION",
-            "npm i --silent --quiet --no-progress -g aws-cdk@2.17.0",
+            "npm i --silent --quiet --no-progress -g aws-cdk@2.45.0",
             '(( [[ -n "CDK_TAGS" ]] ) && ( cdk bootstrap ${BOOTSTRAP_URL} )) || '
             "( cdk bootstrap ${BOOTSTRAP_URL} )",
         ]
