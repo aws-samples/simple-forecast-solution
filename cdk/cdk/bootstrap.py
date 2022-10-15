@@ -259,6 +259,7 @@ class BootstrapStack(Stack):
                         "ecr:SetRepositoryPolicy",
                         "ecr:CreateRepository",
                         "ecr:PutImageScanningConfiguration",
+                        "ecr:PutImageTagMutability",
                         "ecr:DeleteRepository",
                         "ecr:TagResource",
                         "ecr:UntagResource",
@@ -307,6 +308,7 @@ class BootstrapStack(Stack):
             f"git clone {AFA_REPO_URL}",
             "cd simple-forecast-solution/",
             f"git checkout {self.afa_branch.value_as_string}",
+            "pip install -q -r ./requirements.txt",
             "make deploy-ui EMAIL=$EMAIL INSTANCE_TYPE=$INSTANCE_TYPE "
             'AFA_STACK_NAME=$AFA_STACK_NAME CDK_TAGS="$CDK_TAGS" ',
         ]

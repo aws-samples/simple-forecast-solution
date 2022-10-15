@@ -10,7 +10,7 @@ setuptools.setup(
         "numpy==1.23.3",
         "scipy>=1.6.0",
         "tqdm",
-        "streamlit==1.11.1",
+        "streamlit",
         "stqdm",
         "cloudpickle==1.6.0",
         "plotly",
@@ -20,11 +20,10 @@ setuptools.setup(
         "streamlit-aggrid",
         "joblib",
         "toolz",
-        "pandera"
+        "pandera",
     ],
     python_requires=">=3.8",
     classifiers=[
-        "Programming Language :: Python :: 3.8"
-        "Programming Language :: Python :: 3.9"
+        "Programming Language :: Python :: 3.8" "Programming Language :: Python :: 3.9"
     ],
 )
