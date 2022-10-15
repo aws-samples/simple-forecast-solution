@@ -9,7 +9,7 @@ AFA_STACK_NAME:=AfaStack
 BOOTSTRAP_STACK_NAME:=AfaBootstrapStack
 CDK_TAGS:=--tags Project=Afa
 
-.PHONY: deploy tests default
+.PHONY: deploy tests default release
 
 default: .venv
 
@@ -34,9 +34,11 @@ tests: .venv
 build/:
 	mkdir -p $@
 
-build/template.yaml: cdk/app.py cdk/cdk/bootstrap.py build/ .venv 
-	source $(word 4, $^)/bin/activate ; \
+build/template.yaml: cdk/app.py cdk/cdk/bootstrap.py build/
 	cdk synth -a 'python3 -B $<' -c branch=${BRANCH} ${BOOTSTRAP_STACK_NAME} > $@
+
+build/build.zip:
+	zip -r $< build
 
 # Deploy the bootstrap stack
 deploy: build/template.yaml .venv

@@ -7,3 +7,4 @@ ipympl
 jupyterlab-theme-hale
 jedi
 tox
+checkov
