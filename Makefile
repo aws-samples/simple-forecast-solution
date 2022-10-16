@@ -4,6 +4,8 @@ ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 EMAIL:=user@example.com
 INSTANCE_TYPE:=ml.t2.medium
 BRANCH:=main
+AFA_BRANCH:=main
+LAMBDAMAP_BRANCH:=main
 
 AFA_STACK_NAME:=AfaStack
 BOOTSTRAP_STACK_NAME:=AfaBootstrapStack
@@ -58,4 +60,6 @@ deploy-ui: cdk/app.py
 		--require-approval never \
 		--parameters ${AFA_STACK_NAME}:emailAddress=${EMAIL} \
 		--parameters ${AFA_STACK_NAME}:instanceType=${INSTANCE_TYPE} \
+		--parameters ${AFA_STACK_NAME}:afaBranch=${AFA_BRANCH} \
+		--parameters ${AFA_STACK_NAME}:lambdamapBranch=${LAMBDAMAP_BRANCH} \
 		${CDK_TAGS}

@@ -309,8 +309,10 @@ class BootstrapStack(Stack):
             "cd simple-forecast-solution/",
             f"git checkout {self.afa_branch.value_as_string}",
             "pip install -q -r ./requirements.txt",
-            "make deploy-ui EMAIL=$EMAIL INSTANCE_TYPE=$INSTANCE_TYPE "
-            'AFA_STACK_NAME=$AFA_STACK_NAME CDK_TAGS="$CDK_TAGS" ',
+            "make deploy-ui "
+            "   EMAIL=$EMAIL INSTANCE_TYPE=$INSTANCE_TYPE"
+            "   AFA_BRANCH=$AFA_BRANCH LAMBDAMAP_BRANCH=$LAMBDAMAP_BRANCH"
+            '   AFA_STACK_NAME=$AFA_STACK_NAME CDK_TAGS="$CDK_TAGS"',
         ]
 
         bucket = s3.Bucket.from_bucket_name(self, "BootstrapBucket", "afa-artifacts")
@@ -325,6 +327,9 @@ class BootstrapStack(Stack):
 
         # environment variables for the codebuild actions
         env_variables = {
+            "LAMBDAMAP_BRANCH": codebuild.BuildEnvironmentVariable(
+                value=self.lambdamap_branch.value_as_string
+            ),
             "LAMBDAMAP_STACK_NAME": codebuild.BuildEnvironmentVariable(
                 value=LAMBDAMAP_STACK_NAME
             ),
@@ -339,6 +344,9 @@ class BootstrapStack(Stack):
             ),
             "AFA_STACK_NAME": codebuild.BuildEnvironmentVariable(
                 value=self.afa_stack_name
+            ),
+            "AFA_BRANCH": codebuild.BuildEnvironmentVariable(
+                value=self.afa_branch.value_as_string
             ),
         }
 

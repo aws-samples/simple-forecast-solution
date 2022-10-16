@@ -43,6 +43,6 @@ deploy: ${STACK_NAME}
 
 deploy-cdk:
 	cdk deploy -a 'python -B app.py' ${STACK_NAME} \
-		--parameters emailAddress=${EMAIL} \
-		--parameters lambdamapBranch=${LAMBDAMAP_BRANCH} \
-		--parameters afaBranch=${AFA_BRANCH}
+		--parameters ${STACK_NAME}:emailAddress=${EMAIL} \
+		--parameters ${STACK_NAME}:lambdamapBranch=${LAMBDAMAP_BRANCH} \
+		--parameters ${STACK_NAME}:afaBranch=${AFA_BRANCH}
