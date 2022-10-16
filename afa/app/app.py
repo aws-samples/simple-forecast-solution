@@ -2499,8 +2499,6 @@ if __name__ == "__main__":
 
     state["landing_page_url"] = landing_page_url
 
-    # st.set_page_config(layout="wide")
-
     #
     # Sidebar
     #
