@@ -315,7 +315,7 @@ class BootstrapStack(Stack):
             '   AFA_STACK_NAME=$AFA_STACK_NAME CDK_TAGS="$CDK_TAGS"',
         ]
 
-        bucket = s3.Bucket.from_bucket_name(self, "BootstrapBucket", "afa-artifacts")
+        bucket = s3.Bucket.from_bucket_name(self, "BootstrapBucket", "sfs-public")
         source_artifact = codepipeline.Artifact("DummyArtifact")
 
         s3_action = codepipeline_actions.S3SourceAction(

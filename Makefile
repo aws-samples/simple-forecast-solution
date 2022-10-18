@@ -39,8 +39,8 @@ build/:
 build/template.yaml: cdk/app.py cdk/cdk/bootstrap.py build/
 	cdk synth -a 'python3 -B $<' -c branch=${BRANCH} ${BOOTSTRAP_STACK_NAME} > $@
 
-build/build.zip:
-	zip -r $< build
+build/build.zip: build/
+	zip -r $@ $<
 
 # Deploy the bootstrap stack
 deploy: build/template.yaml .venv
