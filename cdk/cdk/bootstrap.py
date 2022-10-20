@@ -79,7 +79,7 @@ class BootstrapStack(Stack):
         )
 
         # lambdamap codebuild policy
-        iam.Policy(
+        lambdamap_policy = iam.Policy(
             self,
             "LambdaMapCodeBuildPolicy",
             roles=[lambdamap_codebuild_role],
@@ -249,8 +249,16 @@ class BootstrapStack(Stack):
             ],
         )
 
+        lambdamap_policy.node.default_child.cfn_options.metadata = {
+            "cfn_nag": {
+                "rules_to_suppress": [
+                    {"id": "W12", "reason": "These actions require '*' resources."},
+                ]
+            }
+        }
+
         # afa codebuild policy
-        iam.Policy(
+        afa_policy = iam.Policy(
             self,
             "AfaCodeBuildPolicy",
             roles=[afa_codebuild_role],
@@ -475,6 +483,14 @@ class BootstrapStack(Stack):
             ],
         )
 
+        afa_policy.node.default_child.cfn_options.metadata = {
+            "cfn_nag": {
+                "rules_to_suppress": [
+                    {"id": "W12", "reason": "These actions require '*' resources."},
+                ]
+            }
+        }
+
         self.make_codebuild_projects(lambdamap_codebuild_role, afa_codebuild_role)
         self.deploy_stacks()
 
@@ -630,43 +646,62 @@ class BootstrapStack(Stack):
             ],
         )
 
-        lambda_role.add_to_policy(
-            iam.PolicyStatement(
-                effect=iam.Effect.ALLOW,
-                actions=["codebuild:StartBuild"],
-                resources=[
-                    self.afa_stack_project.project_arn,
-                    self.lambdamap_stack_project.project_arn,
-                ],
-            )
+        lambda_policy = iam.Policy(
+            self,
+            "LambdaPolicy",
+            roles=[lambda_role],
+            statements=[
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=["codebuild:StartBuild"],
+                    resources=[
+                        self.afa_stack_project.project_arn,
+                        self.lambdamap_stack_project.project_arn,
+                    ],
+                ),
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=["codebuild:ListProjects"],
+                    resources=["*"],
+                    conditions={
+                        "ForAllValues:StringEquals": {
+                            "aws:ResourceAccount": Aws.ACCOUNT_ID,
+                            "aws:SourceAccount": Aws.ACCOUNT_ID,
+                        }
+                    },
+                ),
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "lambda:GetFunction",
+                        "lambda:ListTags",
+                        "lambda:TagResource",
+                        "lambda:InvokeFunction",
+                    ],
+                    resources=[f"arn:aws:lambda:{RACC}:function:DeployStacksFunction"],
+                ),
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "logs:CreateLogGroup",
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents",
+                    ],
+                    resources=[
+                        f"arn:aws:logs:{RACC}:log-group:/aws/lambda/",
+                        f"arn:aws:logs:{RACC}:log-group:/aws/lambda/{Aws.STACK_NAME}*",
+                    ],
+                ),
+            ],
         )
 
-        lambda_role.add_to_policy(
-            iam.PolicyStatement(
-                effect=iam.Effect.ALLOW,
-                actions=["codebuild:ListProjects"],
-                resources=["*"],
-                conditions={
-                    "ForAllValues:StringEquals": {
-                        "aws:ResourceAccount": Aws.ACCOUNT_ID,
-                        "aws:SourceAccount": Aws.ACCOUNT_ID,
-                    }
-                },
-            )
-        )
-
-        lambda_role.add_to_policy(
-            iam.PolicyStatement(
-                effect=iam.Effect.ALLOW,
-                actions=[
-                    "lambda:GetFunction",
-                    "lambda:ListTags",
-                    "lambda:TagResource",
-                    "lambda:InvokeFunction",
-                ],
-                resources=[f"arn:aws:lambda:{RACC}:function:DeployStacksFunction"],
-            )
-        )
+        lambda_policy.node.default_child.cfn_options.metadata = {
+            "cfn_nag": {
+                "rules_to_suppress": [
+                    {"id": "W12", "reason": "These actions require '*' resources."}
+                ]
+            }
+        }
 
         deploy_func = lambda_.Function(
             self,
@@ -680,6 +715,25 @@ class BootstrapStack(Stack):
             },
             role=lambda_role,
         )
+
+        deploy_func.node.default_child.cfn_options.metadata = {
+            "cfn_nag": {
+                "rules_to_suppress": [
+                    {
+                        "id": "W89",
+                        "reason": "Function does not access resources in a VPC.",
+                    },
+                    {
+                        "id": "W92",
+                        "reason": "Function only runs once during CFN deploys.",
+                    },
+                    {
+                        "id": "W58",
+                        "reason": "Function has permissions to write to CW logs.",
+                    },
+                ]
+            }
+        }
 
         cust_resource = core.CustomResource(
             self, "CustomResource", service_token=deploy_func.function_arn
