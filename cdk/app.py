@@ -2,8 +2,7 @@
 import os
 import sys
 
-import aws_cdk as core
-
+from aws_cdk import App, Tags
 from cdk.stack import AfaStack
 from cdk.bootstrap import BootstrapStack
 
@@ -12,7 +11,7 @@ PWD = os.path.dirname(os.path.realpath(__file__))
 TAG_NAME = "Project"
 TAG_VALUE = "Afa"
 
-app = core.App()
+app = App()
 
 stack_name = app.node.try_get_context("afa_stack_name")
 boot_stack_name = app.node.try_get_context("boot_stack_name")
@@ -31,7 +30,7 @@ if branch is None:
 if project_tag is None:
     project_tag = TAG_VALUE
 
-core.Tags.of(app).add(TAG_NAME, project_tag)
+Tags.of(app).add(TAG_NAME, project_tag)
 
 AfaStack(app, stack_name)
 BootstrapStack(app, boot_stack_name, lambdamap_branch=branch,

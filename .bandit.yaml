@@ -1,0 +1,16 @@
+---
+# don't scan these directories
+exclude_dirs:
+  - "/.tox/"
+  - "/.venv/"
+  - "/.nenv/"
+  - "/cdk.out/"
+  - "/ddk.out/"
+
+# allow `assert` to be used in test scripts
+assert_used:
+  skips:
+    - "*/test_*.py"
+
+skips:
+  - B403 # allow `pickle`

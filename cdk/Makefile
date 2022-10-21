@@ -1,7 +1,7 @@
 #
 # Usage:
 #   make deploy EMAIL=<your email address> INSTANCE_TYPE=<ml.* ec2 instance type>
-# 
+#
 export SHELL
 SHELL:=/bin/bash
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
@@ -12,6 +12,8 @@ STACK_NAME:=AfaBootstrapStack
 # instances are deployed and when the ML forecasting jobs are completed.
 EMAIL:=user@example.com
 INSTANCE_TYPE:=ml.t2.medium
+LAMBDAMAP_BRANCH:=main
+AFA_BRANCH:=main
 
 .PHONY: deploy destroy
 
@@ -24,8 +26,7 @@ destroy:
 	cd cdk ; cdk destroy --all
 
 # Generate the cloudformation YAML template
-template.yaml: cdk/bootstrap.py .venv
-	source $(word 2, $^)/bin/activate ; \
+template.yaml: cdk/bootstrap.py
 	cdk synth -a 'python3 -B $<' > $@
 
 ${STACK_NAME}: template.yaml .venv
@@ -39,3 +40,9 @@ ${STACK_NAME}: template.yaml .venv
 			instanceType=${INSTANCE_TYPE}
 
 deploy: ${STACK_NAME}
+
+deploy-cdk:
+	cdk deploy -a 'python -B app.py' ${STACK_NAME} \
+		--parameters ${STACK_NAME}:emailAddress=${EMAIL} \
+		--parameters ${STACK_NAME}:lambdamapBranch=${LAMBDAMAP_BRANCH} \
+		--parameters ${STACK_NAME}:afaBranch=${AFA_BRANCH}

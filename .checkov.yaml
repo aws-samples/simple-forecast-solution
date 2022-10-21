@@ -1,0 +1,6 @@
+skip-path:
+  - cdk.out/
+  - ddk.out/
+  - .tox/
+  - .venv/
+  - .nenv/

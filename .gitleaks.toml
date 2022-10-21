@@ -1,0 +1,12 @@
+[extend]
+useDefault = true
+
+[[rules]]
+
+[allowlist]
+paths = [
+    '''.venv''',
+    '''.nenv''',
+    '''.tox''',
+    '''.pytest_cache'''
+]

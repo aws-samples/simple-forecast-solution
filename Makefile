@@ -1,15 +1,17 @@
 export SHELL
 SHELL:=/bin/bash
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-EMAIL:=
+EMAIL:=user@example.com
 INSTANCE_TYPE:=ml.t2.medium
 BRANCH:=main
+AFA_BRANCH:=main
+LAMBDAMAP_BRANCH:=main
 
 AFA_STACK_NAME:=AfaStack
 BOOTSTRAP_STACK_NAME:=AfaBootstrapStack
 CDK_TAGS:=--tags Project=Afa
 
-.PHONY: deploy tests default
+.PHONY: deploy tests default release
 
 default: .venv
 
@@ -34,9 +36,11 @@ tests: .venv
 build/:
 	mkdir -p $@
 
-build/template.yaml: cdk/app.py cdk/cdk/bootstrap.py build/ .venv 
-	source $(word 4, $^)/bin/activate ; \
+build/template.yaml: cdk/app.py cdk/cdk/bootstrap.py build/
 	cdk synth -a 'python3 -B $<' -c branch=${BRANCH} ${BOOTSTRAP_STACK_NAME} > $@
+
+build/build.zip: build/
+	zip -r $@ $<
 
 # Deploy the bootstrap stack
 deploy: build/template.yaml .venv
@@ -51,10 +55,11 @@ deploy: build/template.yaml .venv
 		${CDK_TAGS}
 
 # Deploy the ui stack
-deploy-ui: cdk/app.py .venv
-	source $(word 2, $^)/bin/activate ; \
+deploy-ui: cdk/app.py
 	cdk deploy -a 'python3 -B $<' ${AFA_STACK_NAME} \
 		--require-approval never \
 		--parameters ${AFA_STACK_NAME}:emailAddress=${EMAIL} \
 		--parameters ${AFA_STACK_NAME}:instanceType=${INSTANCE_TYPE} \
+		--parameters ${AFA_STACK_NAME}:afaBranch=${AFA_BRANCH} \
+		--parameters ${AFA_STACK_NAME}:lambdamapBranch=${LAMBDAMAP_BRANCH} \
 		${CDK_TAGS}
