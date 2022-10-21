@@ -8,7 +8,7 @@ phases:
       python: 3.9
     commands:
       - pip install -q tox
-      - npm i --silent --quiet --no-progress -g aws-cdk@2.17.0
+      - npm i --silent --quiet --no-progress -g aws-cdk@2.43.1
   pre_build:
     commands:
       - make tox

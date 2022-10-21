@@ -19,12 +19,12 @@ TAG_VALUE = "Afa"
 RACC = f"{core.Aws.REGION}:{core.Aws.ACCOUNT_ID}"
 ACCOUNT_ID = Aws.ACCOUNT_ID
 
-# The lambda function to start a build of the codebuild project
-
 
 class BootstrapStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
-        """ """
+        """
+        """
+
         super().__init__(scope, construct_id)
 
         # self.lambdamap_branch = kwargs.get("lambdamap_branch", "main")
@@ -501,6 +501,7 @@ class BootstrapStack(Stack):
                         "ForAllValues:StringEquals": {
                             "aws:ResourceAccount": Aws.ACCOUNT_ID,
                             "aws:SourceAccount": Aws.ACCOUNT_ID,
+
                         }
                     },
                 ),
