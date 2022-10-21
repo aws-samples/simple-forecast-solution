@@ -166,6 +166,8 @@ class BootstrapStack(Stack):
                             "sagemaker:CreateNotebookInstance",
                             "sagemaker:UpdateNotebookInstance",
                             "sagemaker:AddTags",
+                            "sagemaker:DeleteTags",
+                            "sagemaker:ListTags"
                         ],
                         resources=[
                             f"arn:aws:sagemaker:{core.Aws.REGION}:{core.Aws.ACCOUNT_ID}:notebook-instance/{self.afa_stack_name.lower()}*",

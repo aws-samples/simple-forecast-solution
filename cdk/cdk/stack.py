@@ -155,7 +155,11 @@ class AfaStack(Stack):
                             "sagemaker:DeleteNotebookInstanceLifecycleConfig",
                             "sagemaker:UpdateNotebookInstanceLifecycleConfig",
                             "sagemaker:CreateNotebookInstance",
-                            "sagemaker:UpdateNotebookInstance"
+                            "sagemaker:UpdateNotebookInstance",
+                            "sagemaker:AddTags",
+                            "sagemaker:DeleteTags",
+                            "sagemaker:ListTags",
+
                         ],
                         resources=[
                             f"arn:aws:sagemaker:{core.Aws.REGION}:{core.Aws.ACCOUNT_ID}:notebook-instance/{construct_id.lower()}*",
