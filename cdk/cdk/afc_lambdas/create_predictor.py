@@ -42,40 +42,27 @@ def create_predictor_handler(event, context):
         payload["StatusJsonS3Path"])
 
     AFC_DATASET_GROUP_ARN = payload["DatasetGroupArn"]
-    AFC_FORECAST_HORIZON = payload["horiz"] + 1
+    AFC_FORECAST_HORIZON = payload["horiz"]
     AFC_FORECAST_FREQUENCY = payload["freq"]
     #AFC_ALGORITHM_NAME = "NPTS"
     #AFC_ALGORITHM_ARN = "arn:aws:forecast:::algorithm/NPTS"
     AFC_PREDICTOR_NAME = f"{prefix}_AutoML"
 
-    create_predictor_resp = afc.create_predictor(
+    create_predictor_resp = afc.create_auto_predictor(
         PredictorName=AFC_PREDICTOR_NAME,
         ForecastHorizon=AFC_FORECAST_HORIZON,
-        #AlgorithmArn=AFC_ALGORITHM_ARN, # TODO: delete this when ready
-        PerformAutoML=True, # TODO: Uncomment this when ready
-        #PerformHPO=False,
-        EvaluationParameters={
-            "NumberOfBacktestWindows": 5
-        },
-        InputDataConfig={
-            "DatasetGroupArn": AFC_DATASET_GROUP_ARN
-        },
-        FeaturizationConfig={
-            "ForecastFrequency": AFC_FORECAST_FREQUENCY,
-            "Featurizations": [
+        ForecastFrequency=AFC_FORECAST_FREQUENCY,
+        DataConfig={
+            "DatasetGroupArn": AFC_DATASET_GROUP_ARN,
+            "AttributeConfigs":[
                 {
                     "AttributeName": "demand",
-                    "FeaturizationPipeline": [
-                        {
-                            "FeaturizationMethodName": "filling",
-                            "FeaturizationMethodParameters": {
-                                "aggregation": "sum",
-                                "frontfill": "none",
-                                "middlefill": "zero",
-                                "backfill": "zero"
-                            }
-                        }
-                    ]
+                    "Transformations": {
+                        "aggregation": "sum",
+                        "frontfill": "none",
+                        "middlefill": "zero",
+                        "backfill": "zero"
+                    }
                 }
             ]
         }

@@ -1,6 +1,8 @@
 import os
 
 from textwrap import dedent
+from constructs import Construct
+import aws_cdk as core
 from aws_cdk import (
     aws_s3 as s3,
     aws_ssm as ssm,
@@ -12,8 +14,7 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_stepfunctions as sfn,
     aws_stepfunctions_tasks as tasks,
-    core,
-    core as cdk,
+    Stack,
     aws_codebuild as codebuild
 )
 
@@ -23,8 +24,8 @@ TAG_NAME = "Project"
 TAG_VALUE = "Afa"
 
 
-class AfaStack(cdk.Stack):
-    def __init__(self, scope: cdk.Construct, construct_id: str, **kwargs) -> None:
+class AfaStack(Stack):
+    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(
             scope,
             construct_id,
