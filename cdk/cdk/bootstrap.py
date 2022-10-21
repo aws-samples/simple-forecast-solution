@@ -2,9 +2,10 @@
 import os
 
 from textwrap import dedent
+import aws_cdk as core
+from constructs import Construct
 from aws_cdk import (
-    core,
-    core as cdk,
+    Stack,
     aws_lambda as lambda_,
     aws_iam as iam,
     aws_codebuild as codebuild,
@@ -35,8 +36,8 @@ def lambda_handler(event, context):
 """)
 
 
-class BootstrapStack(core.Stack):
-    def __init__(self, scope: cdk.Construct, construct_id: str, **kwargs) -> None:
+class BootstrapStack(Stack):
+    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         """
         """
         super().__init__(scope, construct_id)
@@ -163,7 +164,8 @@ class BootstrapStack(core.Stack):
                             "sagemaker:DeleteNotebookInstanceLifecycleConfig",
                             "sagemaker:UpdateNotebookInstanceLifecycleConfig",
                             "sagemaker:CreateNotebookInstance",
-                            "sagemaker:UpdateNotebookInstance"
+                            "sagemaker:UpdateNotebookInstance",
+                            "sagemaker:AddTags",
                         ],
                         resources=[
                             f"arn:aws:sagemaker:{core.Aws.REGION}:{core.Aws.ACCOUNT_ID}:notebook-instance/{self.afa_stack_name.lower()}*",
@@ -248,7 +250,10 @@ class BootstrapStack(core.Stack):
                             "ecr:PutImageScanningConfiguration",
                             "ecr:DeleteRepository",
                             "ecr:TagResource",
-                            "ecr:UntagResource"
+                            "ecr:UntagResource",
+                            "ecr-public:GetAuthorizationToken",
+                            "sts:GetServiceBearerToken",
+                            "ecr:PutImageTagMutability"
                         ],
                         resources=[
                             f"*"
@@ -262,7 +267,7 @@ class BootstrapStack(core.Stack):
                 codebuild_project_id,
                 environment=codebuild.BuildEnvironment(
                     privileged=True,
-                    build_image=codebuild.LinuxBuildImage.AMAZON_LINUX_2_3
+                    build_image=codebuild.LinuxBuildImage.AMAZON_LINUX_2_4
                 ),
                 environment_variables={
                     "LAMBDAMAP_STACK_NAME": codebuild.BuildEnvironmentVariable(value=LAMBDAMAP_STACK_NAME),
@@ -285,7 +290,8 @@ class BootstrapStack(core.Stack):
                                     f"""export CDK_TAGS=$(aws cloudformation describe-stacks --stack-name {core.Aws.STACK_NAME} --query Stacks[0].Tags | python -c 'import sys, json; print(" ".join("--tags " + d["Key"] + "=" + d["Value"] for d in json.load(sys.stdin)))')""",
                                     "export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)",
                                     "export BOOTSTRAP_URL=aws://$AWS_ACCOUNT_ID/$AWS_DEFAULT_REGION",
-                                    "npm i --silent --quiet --no-progress -g aws-cdk@2.17.0",
+                                    "npm i --silent --quiet --no-progress -g aws-cdk@2.43.1",
+                                    "aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws",
                                     "(( [[ -n \"CDK_TAGS\" ]] ) && ( cdk bootstrap ${BOOTSTRAP_URL} )) || ( cdk bootstrap ${BOOTSTRAP_URL} )"
                                 ]
                             },

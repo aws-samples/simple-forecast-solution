@@ -2,8 +2,7 @@
 import os
 import sys
 
-from aws_cdk import core
-from aws_cdk import core as cdk
+import aws_cdk as core
 
 from cdk.stack import AfaStack
 from cdk.bootstrap import BootstrapStack
