@@ -61,13 +61,7 @@ class BootstrapStack(Stack):
         self.afa_branch = core.CfnParameter(self, "afaBranch", default="main")
 
         # Add any policies needed to deploy the main stack
-        lambdamap_codebuild_role = iam.Role(
-            self,
-            "LambdaMapCodeBuildRole",
-            assumed_by=iam.ServicePrincipal("codebuild.amazonaws.com"),
-        )
-
-        afa_codebuild_role = iam.Role(
+        self.codebuild_role = iam.Role(
             self,
             "AfaCodeBuildRole",
             assumed_by=iam.ServicePrincipal("codebuild.amazonaws.com"),
@@ -82,13 +76,14 @@ class BootstrapStack(Stack):
         lambdamap_policy = iam.Policy(
             self,
             "LambdaMapCodeBuildPolicy",
-            roles=[lambdamap_codebuild_role],
+            roles=[self.codebuild_role],
             statements=[
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
                     actions=[
                         "cloudformation:CreateChangeSet",
                         "cloudformation:CreateStack",
+                        "cloudformation:DeleteStack",
                         "cloudformation:DescribeStacks",
                         "cloudformation:DescribeStackEvents",
                         "cloudformation:DescribeChangeSet",
@@ -157,6 +152,31 @@ class BootstrapStack(Stack):
                         f"arn:aws:lambda:{RACC}:function:"
                         f"{self.lambdamap_function_name.value_as_string}",
                     ],
+                ),
+                # S3
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "s3:CreateBucket",
+                        "s3:GetObject*",
+                        "s3:GetBucketPolicy*",
+                        "s3:PutObject*",
+                        "s3:ListBucket",
+                        "s3:GetBucketLocation",
+                        "s3:GetEncryptionConfiguration",
+                        "s3:PutEncryptionConfiguration",
+                        "s3:PutBucketVersioning",
+                        "s3:SetBucketEncryption",
+                        "s3:PutAccountPublicAccessBlock",
+                        "s3:PutBucketLogging",
+                        "s3:PutBucketPublicAccessBlock",
+                        "s3:PutBucketTagging",
+                        "s3:PutBucketVersioning",
+                        "s3:PutBucketPolicy",
+                        "s3:PutObjectTagging",
+                        "s3:DeleteBucketPolicy",
+                    ],
+                    resources=["arn:aws:s3:::cdk-*", "arn:aws:s3:::cdktoolkit-*"],
                 ),
                 # ECR
                 iam.PolicyStatement(
@@ -239,6 +259,7 @@ class BootstrapStack(Stack):
                         "ssm:GetParameters",
                         "ssm:GetParametersByPath",
                         "ssm:PutParameter",
+                        "ssm:DeleteParameter",
                         "ssm:ListTagsForResource",
                         "ssm:AddTagsToResource",
                         "ssm:RemoveTagsFromResource",
@@ -261,7 +282,7 @@ class BootstrapStack(Stack):
         afa_policy = iam.Policy(
             self,
             "AfaCodeBuildPolicy",
-            roles=[afa_codebuild_role],
+            roles=[self.codebuild_role],
             statements=[
                 #
                 # CloudFormation
@@ -271,6 +292,7 @@ class BootstrapStack(Stack):
                     actions=[
                         "cloudformation:CreateChangeSet",
                         "cloudformation:CreateStack",
+                        "cloudformation:DeleteStack",
                         "cloudformation:DescribeStacks",
                         "cloudformation:DescribeStackEvents",
                         "cloudformation:DescribeChangeSet",
@@ -344,6 +366,7 @@ class BootstrapStack(Stack):
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
                     actions=[
+                        "s3:CreateBucket",
                         "s3:GetObject*",
                         "s3:PutObject*",
                         "s3:ListBucket",
@@ -398,6 +421,7 @@ class BootstrapStack(Stack):
                         "ssm:AddTagsToResource",
                         "ssm:RemoveTagsFromResource",
                         "ssm:UntagResource",
+                        "ssm:DeleteParameter",
                     ],
                     resources=[
                         f"arn:aws:ssm:{RACC}:parameter/AfaS3Bucket",
@@ -491,19 +515,19 @@ class BootstrapStack(Stack):
             }
         }
 
-        self.make_codebuild_projects(lambdamap_codebuild_role, afa_codebuild_role)
+        self.make_codebuild_project(self.codebuild_role)
         self.deploy_stacks()
 
         return
 
-    def make_codebuild_projects(self, lambdamap_codebuild_role, afa_codebuild_role):
+    def make_codebuild_project(self, codebuild_role):
         """Make the codepieline project that does the nested deployment of the
         AfaStack and AfaLambdaMapStack.
 
         """
 
         install_cmds = [
-            "export CDK_TAGS=$(aws cloudformation describe-stacks --stack-name "
+            "export CDK_TAGS=$(aws cloudformation describe-stacks --stack-name="
             f"{core.Aws.STACK_NAME} --query Stacks[0].Tags | "
             """python -c 'import sys, json; print(" ".join("--tags " + d["Key"] """
             """+ "=" + d["Value"] for d in json.load(sys.stdin)))')""",
@@ -528,6 +552,7 @@ class BootstrapStack(Stack):
         ]
 
         afa_stack_cmds = [
+            "cd ..",
             f"git clone {AFA_REPO_URL}",
             "cd simple-forecast-solution/",
             f"git checkout {self.afa_branch.value_as_string}",
@@ -564,9 +589,9 @@ class BootstrapStack(Stack):
         }
 
         # codebuild project to deploy the AfaLambdaMapStack
-        self.lambdamap_stack_project = codebuild.Project(
+        self.deploy_stacks_project = codebuild.Project(
             self,
-            "LambdaMapStackProject",
+            "DeployStacksProject",
             environment=codebuild.BuildEnvironment(
                 privileged=True,
                 build_image=codebuild.LinuxBuildImage.AMAZON_LINUX_2_4,
@@ -580,35 +605,11 @@ class BootstrapStack(Stack):
                             "runtime-versions": {"python": "3.9", "nodejs": "16"},
                             "commands": install_cmds,
                         },
-                        "build": {"commands": lambdamap_stack_cmds},
+                        "build": {"commands": lambdamap_stack_cmds + afa_stack_cmds},
                     },
                 }
             ),
-            role=lambdamap_codebuild_role,
-        )
-
-        # codebuild project to deploy the AfaStack
-        self.afa_stack_project = codebuild.Project(
-            self,
-            "AfaStackProject",
-            environment=codebuild.BuildEnvironment(
-                privileged=True,
-                build_image=codebuild.LinuxBuildImage.AMAZON_LINUX_2_4,
-            ),
-            environment_variables=env_variables,
-            build_spec=codebuild.BuildSpec.from_object(
-                {
-                    "version": "0.2",
-                    "phases": {
-                        "install": {
-                            "runtime-versions": {"python": "3.9", "nodejs": "16"},
-                            "commands": install_cmds,
-                        },
-                        "build": {"commands": afa_stack_cmds},
-                    },
-                }
-            ),
-            role=afa_codebuild_role,
+            role=codebuild_role,
         )
 
         return
@@ -625,8 +626,7 @@ class BootstrapStack(Stack):
 
         def lambda_handler(event, context):
             client = boto3.client("codebuild")
-            client.start_build(projectName=os.environ["LAMBDAMAP_PROJECT_NAME"])
-            client.start_build(projectName=os.environ["AFA_PROJECT_NAME"])
+            client.start_build(projectName=os.environ["PROJECT_NAME"])
             cfnresponse.send(event, context, cfnresponse.SUCCESS, {},
                 "CustomResourcePhysicalID")
             return
@@ -655,8 +655,7 @@ class BootstrapStack(Stack):
                     effect=iam.Effect.ALLOW,
                     actions=["codebuild:StartBuild"],
                     resources=[
-                        self.afa_stack_project.project_arn,
-                        self.lambdamap_stack_project.project_arn,
+                        self.deploy_stacks_project.project_arn,
                     ],
                 ),
                 iam.PolicyStatement(
@@ -710,8 +709,7 @@ class BootstrapStack(Stack):
             code=lambda_.Code.from_inline(inline_lambda_str),
             handler="index.lambda_handler",
             environment={
-                "LAMBDAMAP_PROJECT_NAME": self.lambdamap_stack_project.project_name,
-                "AFA_PROJECT_NAME": self.afa_stack_project.project_name,
+                "PROJECT_NAME": self.deploy_stacks_project.project_name,
             },
             role=lambda_role,
         )
@@ -739,8 +737,7 @@ class BootstrapStack(Stack):
             self, "CustomResource", service_token=deploy_func.function_arn
         )
 
-        cust_resource.node.add_dependency(self.afa_stack_project)
-        cust_resource.node.add_dependency(self.lambdamap_stack_project)
+        cust_resource.node.add_dependency(self.deploy_stacks_project)
 
         return
 
