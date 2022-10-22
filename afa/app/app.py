@@ -1968,7 +1968,7 @@ def panel_ml_launch():
 
                 aws_console_url = (
                     "https://console.aws.amazon.com/states/home#/executions/"
-                    "details/{execution_arn})"
+                    f"details/{execution_arn})"
                 )
 
                 st.info(
