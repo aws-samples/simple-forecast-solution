@@ -338,7 +338,7 @@ class BootstrapStack(Stack):
 
         install_cmds = [
             "export CDK_TAGS=$(aws cloudformation describe-stacks --stack-name="
-            f"{core.Aws.STACK_NAME} --query Stacks[0].Tags | "
+            "$BOOTSTRAP_STACK_NAME --query Stacks[0].Tags | "
             """python -c 'import sys, json; print(" ".join("--tags " + d["Key"] """
             """+ "=" + d["Value"] for d in json.load(sys.stdin)))')""",
             "export AWS_ACCOUNT_ID=$(aws sts get-caller-identity "
@@ -350,22 +350,22 @@ class BootstrapStack(Stack):
         ]
 
         lambdamap_stack_cmds = [
-            f"git clone {LAMBDAMAP_REPO_URL}",
+            "git clone $LAMBDAMAP_REPO_URL",
             "cd lambdamap/",
-            f"git checkout {self.lambdamap_branch.value_as_string}",
+            "git checkout $LAMBDAMAP_BRANCH",
             'make deploy STACK_NAME=$LAMBDAMAP_STACK_NAME CDK_TAGS="$CDK_TAGS" '
             "FUNCTION_NAME=$LAMBDAMAP_FUNCTION_NAME "
-            f"EXTRA_CMDS=\"'git clone {AFA_REPO_URL} ; "
-            f"cd ./simple-forecast-solution/ ; "
-            f"git checkout {self.afa_branch.value_as_string} ; "
+            "EXTRA_CMDS=\"'git clone ${AFA_REPO_URL} ; "
+            "cd ./simple-forecast-solution/ ; "
+            "git checkout ${AFA_BRANCH} ; "
             "pip install -q --use-deprecated=legacy-resolver -e .'\"",
         ]
 
         afa_stack_cmds = [
             "cd ..",
-            f"git clone {AFA_REPO_URL}",
+            "git clone $AFA_REPO_URL",
             "cd simple-forecast-solution/",
-            f"git checkout {self.afa_branch.value_as_string}",
+            "git checkout $AFA_BRANCH",
             "pip install -q -r ./requirements.txt",
             "make deploy-ui "
             "   EMAIL=$EMAIL INSTANCE_TYPE=$INSTANCE_TYPE"
@@ -374,6 +374,12 @@ class BootstrapStack(Stack):
         ]
 
         env_variables = {
+            "BOOTSTRAP_STACK_NAME": codebuild.BuildEnvironmentVariable(
+                value=core.Aws.STACK_NAME
+            ),
+            "LAMBDAMAP_REPO_URL": codebuild.BuildEnvironmentVariable(
+                value=LAMBDAMAP_REPO_URL
+            ),
             "LAMBDAMAP_BRANCH": codebuild.BuildEnvironmentVariable(
                 value=self.lambdamap_branch.value_as_string
             ),
@@ -395,6 +401,7 @@ class BootstrapStack(Stack):
             "AFA_BRANCH": codebuild.BuildEnvironmentVariable(
                 value=self.afa_branch.value_as_string
             ),
+            "AFA_REPO_URL": codebuild.BuildEnvironmentVariable(value=AFA_REPO_URL),
         }
 
         codebuild_project = codebuild.Project(
