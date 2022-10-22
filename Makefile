@@ -2,7 +2,7 @@ export SHELL
 SHELL:=/bin/bash
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 EMAIL:=user@example.com
-INSTANCE_TYPE:=ml.t2.medium
+INSTANCE_TYPE:=ml.t3.large
 BRANCH:=main
 AFA_BRANCH:=main
 LAMBDAMAP_BRANCH:=main
