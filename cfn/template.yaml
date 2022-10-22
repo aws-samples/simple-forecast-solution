@@ -409,6 +409,13 @@ Resources:
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
         EnvironmentVariables:
+          - Name: BOOTSTRAP_STACK_NAME
+            Type: PLAINTEXT
+            Value:
+              Ref: AWS::StackName
+          - Name: LAMBDAMAP_REPO_URL
+            Type: PLAINTEXT
+            Value: https://github.com/aws-samples/lambdamap.git
           - Name: LAMBDAMAP_BRANCH
             Type: PLAINTEXT
             Value:
@@ -435,6 +442,9 @@ Resources:
             Type: PLAINTEXT
             Value:
               Ref: afaBranch
+          - Name: AFA_REPO_URL
+            Type: PLAINTEXT
+            Value: https://github.com/aws-samples/simple-forecast-solution.git
         Image: aws/codebuild/amazonlinux2-x86_64-standard:4.0
         ImagePullCredentialsType: CODEBUILD
         PrivilegedMode: true
@@ -444,54 +454,39 @@ Resources:
           - AfaCodeBuildRole2413BF20
           - Arn
       Source:
-        BuildSpec:
-          Fn::Join:
-            - ""
-            - - |-
-                {
-                  "version": "0.2",
-                  "phases": {
-                    "install": {
-                      "runtime-versions": {
-                        "python": "3.9",
-                        "nodejs": "16"
-                      },
-                      "commands": [
-                        "export CDK_TAGS=$(aws cloudformation describe-stacks --stack-name=
-              - Ref: AWS::StackName
-              - |-2
-                 --query Stacks[0].Tags | python -c 'import sys, json; print(\" \".join(\"--tags \" + d[\"Key\"] + \"=\" + d[\"Value\"] for d in json.load(sys.stdin)))')",
-                        "export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)",
-                        "export BOOTSTRAP_URL=aws://$AWS_ACCOUNT_ID/$AWS_DEFAULT_REGION",
-                        "npm i --silent --quiet --no-progress -g aws-cdk@2.45.0",
-                        "(( [[ -n \"CDK_TAGS\" ]] ) && ( cdk bootstrap ${BOOTSTRAP_URL} )) || ( cdk bootstrap ${BOOTSTRAP_URL} )"
-                      ]
-                    },
-                    "build": {
-                      "commands": [
-                        "git clone https://github.com/aws-samples/lambdamap.git",
-                        "cd lambdamap/",
-                        "git checkout
-              - Ref: lambdamapBranch
-              - |-
-                ",
-                        "make deploy STACK_NAME=$LAMBDAMAP_STACK_NAME CDK_TAGS=\"$CDK_TAGS\" FUNCTION_NAME=$LAMBDAMAP_FUNCTION_NAME EXTRA_CMDS=\"'git clone https://github.com/aws-samples/simple-forecast-solution.git ; cd ./simple-forecast-solution/ ; git checkout
-              - Ref: afaBranch
-              - |-2
-                 ; pip install -q --use-deprecated=legacy-resolver -e .'\"",
-                        "cd ..",
-                        "git clone https://github.com/aws-samples/simple-forecast-solution.git",
-                        "cd simple-forecast-solution/",
-                        "git checkout
-              - Ref: afaBranch
-              - |-
-                ",
-                        "pip install -q -r ./requirements.txt",
-                        "make deploy-ui    EMAIL=$EMAIL INSTANCE_TYPE=$INSTANCE_TYPE   AFA_BRANCH=$AFA_BRANCH LAMBDAMAP_BRANCH=$LAMBDAMAP_BRANCH   AFA_STACK_NAME=$AFA_STACK_NAME CDK_TAGS=\"$CDK_TAGS\""
-                      ]
-                    }
-                  }
-                }
+        BuildSpec: |-
+          {
+            "version": "0.2",
+            "phases": {
+              "install": {
+                "runtime-versions": {
+                  "python": "3.9",
+                  "nodejs": "16"
+                },
+                "commands": [
+                  "export CDK_TAGS=$(aws cloudformation describe-stacks --stack-name=$BOOTSTRAP_STACK_NAME --query Stacks[0].Tags | python -c 'import sys, json; print(\" \".join(\"--tags \" + d[\"Key\"] + \"=\" + d[\"Value\"] for d in json.load(sys.stdin)))')",
+                  "export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)",
+                  "export BOOTSTRAP_URL=aws://$AWS_ACCOUNT_ID/$AWS_DEFAULT_REGION",
+                  "npm i --silent --quiet --no-progress -g aws-cdk@2.45.0",
+                  "(( [[ -n \"CDK_TAGS\" ]] ) && ( cdk bootstrap ${BOOTSTRAP_URL} )) || ( cdk bootstrap ${BOOTSTRAP_URL} )"
+                ]
+              },
+              "build": {
+                "commands": [
+                  "git clone $LAMBDAMAP_REPO_URL",
+                  "cd lambdamap/",
+                  "git checkout $LAMBDAMAP_BRANCH",
+                  "make deploy STACK_NAME=$LAMBDAMAP_STACK_NAME CDK_TAGS=\"$CDK_TAGS\" FUNCTION_NAME=$LAMBDAMAP_FUNCTION_NAME EXTRA_CMDS=\"'git clone ${AFA_REPO_URL} ; cd ./simple-forecast-solution/ ; git checkout ${AFA_BRANCH} ; pip install -q --use-deprecated=legacy-resolver -e .'\"",
+                  "cd ..",
+                  "git clone $AFA_REPO_URL",
+                  "cd simple-forecast-solution/",
+                  "git checkout $AFA_BRANCH",
+                  "pip install -q -r ./requirements.txt",
+                  "make deploy-ui    EMAIL=$EMAIL INSTANCE_TYPE=$INSTANCE_TYPE   AFA_BRANCH=$AFA_BRANCH LAMBDAMAP_BRANCH=$LAMBDAMAP_BRANCH   AFA_STACK_NAME=$AFA_STACK_NAME CDK_TAGS=\"$CDK_TAGS\""
+                ]
+              }
+            }
+          }
         Type: NO_SOURCE
       Cache:
         Type: NO_CACHE
