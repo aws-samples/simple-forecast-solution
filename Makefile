@@ -2,7 +2,7 @@ export SHELL
 SHELL:=/bin/bash
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 EMAIL:=user@example.com
-INSTANCE_TYPE:=ml.t2.medium
+INSTANCE_TYPE:=ml.t3.large
 BRANCH:=main
 AFA_BRANCH:=main
 LAMBDAMAP_BRANCH:=main
@@ -40,6 +40,14 @@ build/template.yaml: cdk/app.py cdk/cdk/bootstrap.py build/
 		--parameters ${STACK_NAME}:emailAddress=${EMAIL} \
 		--parameters ${STACK_NAME}:lambdamapBranch=${LAMBDAMAP_BRANCH} \
 		--parameters ${STACK_NAME}:afaBranch=${AFA_BRANCH} > $@
+
+build/afastack.yaml: cdk/app.py
+	cdk synth -a 'python3 -B $<' ${AFA_STACK_NAME} \
+		--require-approval never \
+		--parameters ${AFA_STACK_NAME}:emailAddress=${EMAIL} \
+		--parameters ${AFA_STACK_NAME}:instanceType=${INSTANCE_TYPE} \
+		--parameters ${AFA_STACK_NAME}:afaBranch=${AFA_BRANCH} \
+		--parameters ${AFA_STACK_NAME}:lambdamapBranch=${LAMBDAMAP_BRANCH} > $@
 
 build/build.zip: build/
 	zip -r $@ $<

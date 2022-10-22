@@ -2,8 +2,9 @@ import os
 from textwrap import dedent
 
 import aws_cdk as core
-from aws_cdk import Stack
+from aws_cdk import Aws, Stack
 from aws_cdk import aws_iam as iam
+from aws_cdk import aws_kms as kms
 from aws_cdk import aws_lambda as lambda_
 from aws_cdk import aws_s3 as s3
 from aws_cdk import aws_sagemaker as sm
@@ -38,7 +39,7 @@ class AfaStack(Stack):
         instance_type = core.CfnParameter(
             self,
             "instanceType",
-            default="ml.t2.medium",
+            default="ml.t3.large",
             description="(Required) SageMaker Notebook instance type on which to host "
             "the AFA dashboard (e.g. ml.t2.medium, ml.t3.xlarge, ml.t3.2xlarge, "
             "ml.m4.4xlarge)",
@@ -51,17 +52,37 @@ class AfaStack(Stack):
         self.lambdamap_function_name = kwargs.get(
             "lambdamap_function_name", "AfaLambdaMapFunction"
         )
+        self.kms_key = kms.Key(self, "AfaKmsKey", enable_key_rotation=True)
+        self.lambdas = []
 
         #
         # S3 Bucket
         #
-        bucket = s3.Bucket(
+        logs_bucket = s3.Bucket(
             self,
-            "Bucket",
-            auto_delete_objects=False,
+            "LogBucket",
+            auto_delete_objects=True,
             removal_policy=core.RemovalPolicy.DESTROY,
             encryption=s3.BucketEncryption.S3_MANAGED,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+        )
+
+        logs_bucket.node.default_child.cfn_options.metadata = {
+            "cfn_nag": {
+                "rules_to_suppress": [
+                    {"id": "W35", "reason": "This is the access logging bucket."},
+                ]
+            }
+        }
+
+        bucket = s3.Bucket(
+            self,
+            "Bucket",
+            auto_delete_objects=True,
+            removal_policy=core.RemovalPolicy.DESTROY,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            server_access_logs_bucket=logs_bucket,
         )
 
         #
@@ -92,7 +113,10 @@ class AfaStack(Stack):
         # SNS topic for email notification
         #
         topic = sns.Topic(
-            self, "NotificationTopic", topic_name=f"{construct_id}-NotificationTopic"
+            self,
+            "NotificationTopic",
+            topic_name=f"{construct_id}-NotificationTopic",
+            master_key=self.kms_key,
         )
 
         topic.add_subscription(
@@ -110,6 +134,33 @@ class AfaStack(Stack):
             ],
         )
 
+        iam.Policy(
+            self,
+            "SnsLambdaPolicy",
+            roles=[sns_lambda_role],
+            statements=[
+                # Logging
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "logs:CreateLogStream",
+                        "logs:CreateLogGroup",
+                        "logs:PutLogEvents",
+                    ],
+                    resources=[
+                        f"arn:aws:logs:{RACC}:log-group:/aws/lambda/"
+                        f"{core.Aws.STACK_NAME}*"
+                    ],
+                ),
+                # SNS
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=["sns:Publish"],
+                    resources=[f"arn:aws:sns:{RACC}:{core.Aws.STACK_NAME}*"],
+                ),
+            ],
+        )
+
         self.sns_lambda_role = sns_lambda_role
 
         sns_lambda = lambda_.Function(
@@ -121,6 +172,8 @@ class AfaStack(Stack):
             handler="index.lambda_handler",
             role=sns_lambda_role,
         )
+
+        self.lambdas.append(sns_lambda)
 
         #
         # Notebook lifecycle configuration
@@ -136,9 +189,14 @@ class AfaStack(Stack):
             self,
             "NotebookRole",
             assumed_by=iam.ServicePrincipal("sagemaker.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "service-role/AWSLambdaBasicExecutionRole"
+                )
+            ],
         )
 
-        iam.Policy(
+        sm_policy = iam.Policy(
             self,
             "SmPolicy",
             roles=[sm_role],
@@ -147,7 +205,7 @@ class AfaStack(Stack):
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
                     actions=[
-                        "lambda:*",
+                        "lambda:InvokeFunction",
                     ],
                     resources=[
                         f"arn:aws:lambda:{RACC}:function:"
@@ -158,10 +216,22 @@ class AfaStack(Stack):
                 # S3
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
-                    actions=["s3:*"],
+                    actions=[
+                        "s3:GetObject*",
+                        "s3:PutObject*",
+                        "s3:ListBucket",
+                        "s3:GetBucketLocation",
+                        "s3:GetEncryptionConfiguration",
+                    ],
                     resources=[
                         f"arn:aws:s3:::{construct_id.lower()}*",
                     ],
+                    conditions={
+                        "ForAllValues:StringEquals": {
+                            "aws:ResourceAccount": Aws.ACCOUNT_ID,
+                            "aws:SourceAccount": Aws.ACCOUNT_ID,
+                        }
+                    },
                 ),
                 # SageMaker
                 iam.PolicyStatement(
@@ -187,7 +257,26 @@ class AfaStack(Stack):
                 # Step Functions
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
-                    actions=["states:*"],
+                    actions=[
+                        "states:DescribeExecution",
+                        "states:DescribeActivity",
+                        "states:DescribeStateMachine*",
+                        "states:GetExecutionHistory",
+                        "states:GetActivityTask",
+                        "states:ListExecutions",
+                        "states:StartExecution",
+                        "states:StopExecution",
+                        "states:ListTagsForResource",
+                    ],
+                    resources=[
+                        f"arn:aws:states:{RACC}:*:{core.Aws.STACK_NAME}*",
+                    ],
+                ),
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "states:ListStateMachines",
+                    ],
                     resources=[
                         f"arn:aws:states:{RACC}:*:{core.Aws.STACK_NAME}*",
                     ],
@@ -195,7 +284,7 @@ class AfaStack(Stack):
                 # SSM
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
-                    actions=["ssm:*"],
+                    actions=["ssm:GetParameter*", "ssm:PutParameter"],
                     resources=[
                         f"arn:aws:ssm:{RACC}:parameter/AfaS3Bucket",
                         f"arn:aws:ssm:{RACC}:parameter/AfaS3InputPath",
@@ -203,8 +292,29 @@ class AfaStack(Stack):
                         f"arn:aws:ssm:{RACC}:parameter/AfaAfcStateMachineArn",
                     ],
                 ),
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "ssm:DescribeParameters",
+                    ],
+                    resources=["*"],
+                    conditions={
+                        "ForAllValues:StringEquals": {
+                            "aws:ResourceAccount": Aws.ACCOUNT_ID,
+                            "aws:SourceAccount": Aws.ACCOUNT_ID,
+                        }
+                    },
+                ),
             ],
         )
+
+        sm_policy.node.default_child.cfn_options.metadata = {
+            "cfn_nag": {
+                "rules_to_suppress": [
+                    {"id": "W12", "reason": "Certain actions require '*' resources."},
+                ]
+            }
+        }
 
         #
         # Notebook instance
@@ -217,6 +327,7 @@ class AfaStack(Stack):
             notebook_instance_name=notebook_instance_name,
             volume_size_in_gb=16,
             lifecycle_config_name=lcc.attr_notebook_instance_lifecycle_config_name,
+            kms_key_id=self.kms_key.key_id,
         )
 
         # AFC/Lambda role
@@ -243,7 +354,7 @@ class AfaStack(Stack):
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
                     actions=[
-                        "lambda:*",
+                        "lambda:InvokeFunction",
                     ],
                     resources=[
                         f"arn:aws:lambda:{RACC}:function:"
@@ -254,15 +365,33 @@ class AfaStack(Stack):
                 # S3
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
-                    actions=["s3:*"],
+                    actions=[
+                        "s3:GetObject*",
+                        "s3:PutObject*",
+                        "s3:ListBucket",
+                        "s3:GetBucketLocation",
+                        "s3:GetEncryptionConfiguration",
+                        "s3:GetBucketPolicy",
+                        "s3:GetBucketTagging",
+                    ],
                     resources=[
                         f"arn:aws:s3:::{construct_id.lower()}*",
                     ],
+                    conditions={
+                        "ForAllValues:StringEquals": {
+                            "aws:ResourceAccount": Aws.ACCOUNT_ID,
+                            "aws:SourceAccount": Aws.ACCOUNT_ID,
+                        }
+                    },
                 ),
                 # Logging
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
-                    actions=["logs:*"],
+                    actions=[
+                        "logs:CreateLogStream",
+                        "logs:CreateLogGroup",
+                        "logs:PutLogEvents",
+                    ],
                     resources=[
                         f"arn:aws:logs:{RACC}:log-group:/aws/lambda/"
                         f"{core.Aws.STACK_NAME}*"
@@ -271,7 +400,7 @@ class AfaStack(Stack):
                 # SNS
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
-                    actions=["sns:*"],
+                    actions=["sns:Publish"],
                     resources=[f"arn:aws:sns:{RACC}:{core.Aws.STACK_NAME}*"],
                 ),
             ],
@@ -292,6 +421,8 @@ class AfaStack(Stack):
             role=afc_role,
             timeout=core.Duration.seconds(900),
         )
+
+        self.lambdas.append(prepare_lambda)
 
         prepare_step = tasks.LambdaInvoke(
             self,
@@ -315,6 +446,8 @@ class AfaStack(Stack):
             role=afc_role,
             timeout=core.Duration.seconds(900),
         )
+
+        self.lambdas.append(create_predictor_lambda)
 
         create_predictor_step = tasks.LambdaInvoke(
             self,
@@ -348,6 +481,8 @@ class AfaStack(Stack):
             role=afc_role,
             timeout=core.Duration.seconds(900),
         )
+
+        self.lambdas.append(create_forecast_lambda)
 
         create_forecast_step = tasks.LambdaInvoke(
             self,
@@ -383,6 +518,8 @@ class AfaStack(Stack):
             timeout=core.Duration.seconds(900),
         )
 
+        self.lambdas.append(create_forecast_export_lambda)
+
         create_forecast_export_step = tasks.LambdaInvoke(
             self,
             "CreateExportStep",
@@ -417,6 +554,8 @@ class AfaStack(Stack):
             timeout=core.Duration.seconds(900),
         )
 
+        self.lambdas.append(create_predictor_backtest_export_lambda)
+
         create_predictor_backtest_export_step = tasks.LambdaInvoke(
             self,
             "CreatePredictorBacktestExportStep",
@@ -446,6 +585,8 @@ class AfaStack(Stack):
             role=afc_role,
             timeout=core.Duration.seconds(900),
         )
+
+        self.lambdas.append(postprocess_lambda)
 
         postprocess_step = tasks.LambdaInvoke(
             self,
@@ -478,6 +619,8 @@ class AfaStack(Stack):
             timeout=core.Duration.seconds(900),
         )
 
+        self.lambdas.append(delete_afc_resources_lambda)
+
         delete_afc_resources_step = tasks.LambdaInvoke(
             self,
             "DeleteAfcResourcesStep",
@@ -508,6 +651,8 @@ class AfaStack(Stack):
             handler="index.lambda_handler",
             role=afc_role,
         )
+
+        self.lambdas.append(sns_afc_email_lambda)
 
         sns_afc_email_step = tasks.LambdaInvoke(
             self,
@@ -543,6 +688,26 @@ class AfaStack(Stack):
             string_value=state_machine.state_machine_arn,
             parameter_name="AfaAfcStateMachineArn",
         )
+
+        for lm in self.lambdas:
+            lm.node.default_child.cfn_options.metadata = {
+                "cfn_nag": {
+                    "rules_to_suppress": [
+                        {
+                            "id": "W58",
+                            "reason": "Role has permissions to write to CW logs",
+                        },
+                        {
+                            "id": "W89",
+                            "reason": "Function does not access VPC resources",
+                        },
+                        {
+                            "id": "W92",
+                            "reason": "Function is not intended to be run concurrently",
+                        },
+                    ]
+                }
+            }
 
     def make_nb_lcc_oncreate(self, construct_id):
         """Make the OnCreate script of the lifecycle configuration"""
