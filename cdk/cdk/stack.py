@@ -196,6 +196,8 @@ class AfaStack(Stack):
             ],
         )
 
+        self.kms_key.grant_encrypt_decrypt(sm_role)
+
         sm_policy = iam.Policy(
             self,
             "SmPolicy",

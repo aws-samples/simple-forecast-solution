@@ -380,6 +380,18 @@ Resources:
                   - ":"
                   - Ref: AWS::AccountId
                   - :parameter/cdk-bootstrap/*/version
+          - Action:
+              - kms:CreateKey
+              - kms:ListAliases
+              - kms:ListKeys
+            Condition:
+              ForAllValues:StringEquals:
+                aws:ResourceAccount:
+                  Ref: AWS::AccountId
+                aws:SourceAccount:
+                  Ref: AWS::AccountId
+            Effect: Allow
+            Resource: "*"
         Version: "2012-10-17"
       PolicyName: LambdaMapCodeBuildPolicyDCA4CAA6
       Roles:

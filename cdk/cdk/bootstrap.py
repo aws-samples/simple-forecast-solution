@@ -305,6 +305,18 @@ class BootstrapStack(Stack):
                     ],
                     resources=[f"arn:aws:ssm:{RACC}:parameter/cdk-bootstrap/*/version"],
                 ),
+                # KMS
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=["kms:CreateKey", "kms:ListAliases", "kms:ListKeys"],
+                    resources=["*"],
+                    conditions={
+                        "ForAllValues:StringEquals": {
+                            "aws:ResourceAccount": Aws.ACCOUNT_ID,
+                            "aws:SourceAccount": Aws.ACCOUNT_ID,
+                        }
+                    },
+                ),
             ],
         )
 
