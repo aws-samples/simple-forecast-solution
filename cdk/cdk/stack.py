@@ -2,7 +2,7 @@ import os
 from textwrap import dedent
 
 import aws_cdk as core
-from aws_cdk import Stack
+from aws_cdk import Aws, Stack
 from aws_cdk import aws_iam as iam
 from aws_cdk import aws_lambda as lambda_
 from aws_cdk import aws_s3 as s3
@@ -38,7 +38,7 @@ class AfaStack(Stack):
         instance_type = core.CfnParameter(
             self,
             "instanceType",
-            default="ml.t2.medium",
+            default="ml.t3.large",
             description="(Required) SageMaker Notebook instance type on which to host "
             "the AFA dashboard (e.g. ml.t2.medium, ml.t3.xlarge, ml.t3.2xlarge, "
             "ml.m4.4xlarge)",
@@ -136,6 +136,11 @@ class AfaStack(Stack):
             self,
             "NotebookRole",
             assumed_by=iam.ServicePrincipal("sagemaker.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "service-role/AWSLambdaBasicExecutionRole"
+                )
+            ],
         )
 
         iam.Policy(
@@ -147,7 +152,7 @@ class AfaStack(Stack):
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
                     actions=[
-                        "lambda:*",
+                        "lambda:InvokeFunction",
                     ],
                     resources=[
                         f"arn:aws:lambda:{RACC}:function:"
@@ -158,10 +163,22 @@ class AfaStack(Stack):
                 # S3
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
-                    actions=["s3:*"],
+                    actions=[
+                        "s3:GetObject*",
+                        "s3:PutObject*",
+                        "s3:ListBucket",
+                        "s3:GetBucketLocation",
+                        "s3:GetEncryptionConfiguration",
+                    ],
                     resources=[
                         f"arn:aws:s3:::{construct_id.lower()}*",
                     ],
+                    conditions={
+                        "ForAllValues:StringEquals": {
+                            "aws:ResourceAccount": Aws.ACCOUNT_ID,
+                            "aws:SourceAccount": Aws.ACCOUNT_ID,
+                        }
+                    },
                 ),
                 # SageMaker
                 iam.PolicyStatement(
@@ -187,7 +204,26 @@ class AfaStack(Stack):
                 # Step Functions
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
-                    actions=["states:*"],
+                    actions=[
+                        "states:DescribeExecution",
+                        "states:DescribeActivity",
+                        "states:DescribeStateMachine*",
+                        "states:GetExecutionHistory",
+                        "states:GetActivityTask",
+                        "states:ListExecutions",
+                        "states:StartExecution",
+                        "states:StopExecution",
+                        "states:ListTagsForResource",
+                    ],
+                    resources=[
+                        f"arn:aws:states:{RACC}:*:{core.Aws.STACK_NAME}*",
+                    ],
+                ),
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "states:ListStateMachines",
+                    ],
                     resources=[
                         f"arn:aws:states:{RACC}:*:{core.Aws.STACK_NAME}*",
                     ],
@@ -195,13 +231,26 @@ class AfaStack(Stack):
                 # SSM
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
-                    actions=["ssm:*"],
+                    actions=["ssm:GetParameter*", "ssm:PutParameter"],
                     resources=[
                         f"arn:aws:ssm:{RACC}:parameter/AfaS3Bucket",
                         f"arn:aws:ssm:{RACC}:parameter/AfaS3InputPath",
                         f"arn:aws:ssm:{RACC}:parameter/AfaS3OutputPath",
                         f"arn:aws:ssm:{RACC}:parameter/AfaAfcStateMachineArn",
                     ],
+                ),
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "ssm:DescribeParameters",
+                    ],
+                    resources=["*"],
+                    conditions={
+                        "ForAllValues:StringEquals": {
+                            "aws:ResourceAccount": Aws.ACCOUNT_ID,
+                            "aws:SourceAccount": Aws.ACCOUNT_ID,
+                        }
+                    },
                 ),
             ],
         )
@@ -243,7 +292,7 @@ class AfaStack(Stack):
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
                     actions=[
-                        "lambda:*",
+                        "lambda:InvokeFunction",
                     ],
                     resources=[
                         f"arn:aws:lambda:{RACC}:function:"
@@ -254,15 +303,29 @@ class AfaStack(Stack):
                 # S3
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
-                    actions=["s3:*"],
+                    actions=[
+                        "s3:GetObject*",
+                        "s3:PutObject*",
+                        "s3:ListBucket",
+                        "s3:GetBucketLocation",
+                        "s3:GetEncryptionConfiguration",
+                        "s3:GetBucketPolicy",
+                        "s3:GetBucketTagging",
+                    ],
                     resources=[
                         f"arn:aws:s3:::{construct_id.lower()}*",
                     ],
+                    conditions={
+                        "ForAllValues:StringEquals": {
+                            "aws:ResourceAccount": Aws.ACCOUNT_ID,
+                            "aws:SourceAccount": Aws.ACCOUNT_ID,
+                        }
+                    },
                 ),
                 # Logging
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
-                    actions=["logs:*"],
+                    actions=["logs:CreateLogStream", "logs:CreateLogGroup"],
                     resources=[
                         f"arn:aws:logs:{RACC}:log-group:/aws/lambda/"
                         f"{core.Aws.STACK_NAME}*"
@@ -271,7 +334,7 @@ class AfaStack(Stack):
                 # SNS
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
-                    actions=["sns:*"],
+                    actions=["sns:Publish"],
                     resources=[f"arn:aws:sns:{RACC}:{core.Aws.STACK_NAME}*"],
                 ),
             ],
