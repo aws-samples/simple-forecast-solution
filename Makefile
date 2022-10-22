@@ -6,9 +6,8 @@ INSTANCE_TYPE:=ml.t2.medium
 BRANCH:=main
 AFA_BRANCH:=main
 LAMBDAMAP_BRANCH:=main
-
+STACK_NAME:=AfaBootstrapStack
 AFA_STACK_NAME:=AfaStack
-BOOTSTRAP_STACK_NAME:=AfaBootstrapStack
 CDK_TAGS:=--tags Project=Afa
 
 .PHONY: deploy tests default release
@@ -37,7 +36,10 @@ build/:
 	mkdir -p $@
 
 build/template.yaml: cdk/app.py cdk/cdk/bootstrap.py build/
-	cdk synth -a 'python3 -B $<' -c branch=${BRANCH} ${BOOTSTRAP_STACK_NAME} > $@
+	cdk synth -a 'python -B cdk/app.py' ${STACK_NAME} \
+		--parameters ${STACK_NAME}:emailAddress=${EMAIL} \
+		--parameters ${STACK_NAME}:lambdamapBranch=${LAMBDAMAP_BRANCH} \
+		--parameters ${STACK_NAME}:afaBranch=${AFA_BRANCH} > $@
 
 build/build.zip: build/
 	zip -r $@ $<
@@ -54,7 +56,13 @@ deploy: build/template.yaml .venv
 			instanceType=${INSTANCE_TYPE} \
 		${CDK_TAGS}
 
-# Deploy the ui stack
+deploy-cdk:
+	cdk deploy -a 'python -B cdk/app.py' ${STACK_NAME} \
+		--parameters ${STACK_NAME}:emailAddress=${EMAIL} \
+		--parameters ${STACK_NAME}:lambdamapBranch=${LAMBDAMAP_BRANCH} \
+		--parameters ${STACK_NAME}:afaBranch=${AFA_BRANCH}
+
+# deploy AfaStack
 deploy-ui: cdk/app.py
 	cdk deploy -a 'python3 -B $<' ${AFA_STACK_NAME} \
 		--require-approval never \
@@ -63,3 +71,6 @@ deploy-ui: cdk/app.py
 		--parameters ${AFA_STACK_NAME}:afaBranch=${AFA_BRANCH} \
 		--parameters ${AFA_STACK_NAME}:lambdamapBranch=${LAMBDAMAP_BRANCH} \
 		${CDK_TAGS}
+
+cfn-nag: build/template.yaml
+	cfn_nag_scan --input-path $<
