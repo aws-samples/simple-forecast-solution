@@ -22,12 +22,10 @@ ACCOUNT_ID = Aws.ACCOUNT_ID
 
 class BootstrapStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
-        """
-        """
+        """ """
 
         super().__init__(scope, construct_id)
 
-        # self.lambdamap_branch = kwargs.get("lambdamap_branch", "main")
         self.afa_stack_name = kwargs.get("afa_stack_name", "AfaStack")
 
         #
@@ -60,23 +58,28 @@ class BootstrapStack(Stack):
 
         self.afa_branch = core.CfnParameter(self, "afaBranch", default="main")
 
-        # Add any policies needed to deploy the main stack
-        self.codebuild_role = iam.Role(
+        self.codebuild_role = self.make_codebuild_role()
+        self.codebuild_project = self.make_codebuild_project()
+
+        # Trigger the codebuild project once this stack is deployed
+        self.deploy_stacks()
+
+        return
+
+    def make_codebuild_role(self):
+        """ """
+
+        codebuild_role = iam.Role(
             self,
             "AfaCodeBuildRole",
             assumed_by=iam.ServicePrincipal("codebuild.amazonaws.com"),
-            managed_policies=[
-                iam.ManagedPolicy.from_aws_managed_policy_name(
-                    "AmazonEC2ContainerRegistryPowerUser"
-                )
-            ],
         )
 
         # lambdamap codebuild policy
-        lambdamap_policy = iam.Policy(
+        codebuild_policy = iam.Policy(
             self,
             "LambdaMapCodeBuildPolicy",
-            roles=[self.codebuild_role],
+            roles=[codebuild_role],
             statements=[
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
@@ -98,6 +101,7 @@ class BootstrapStack(Stack):
                     resources=[
                         f"arn:aws:cloudformation:{RACC}:stack/{LAMBDAMAP_STACK_NAME}*",
                         f"arn:aws:cloudformation:{RACC}:stack/{Aws.STACK_NAME}/*",
+                        f"arn:aws:cloudformation:{RACC}:stack/{self.afa_stack_name}*",
                         f"arn:aws:cloudformation:{RACC}:stack/CDKToolkit/*",
                     ],
                 ),
@@ -125,9 +129,14 @@ class BootstrapStack(Stack):
                     ],
                     resources=[
                         f"arn:aws:iam::{ACCOUNT_ID}:role/{LAMBDAMAP_STACK_NAME}*",
-                        f"arn:aws:iam::{ACCOUNT_ID}:policy/{LAMBDAMAP_STACK_NAME}*",
                         f"arn:aws:iam::{ACCOUNT_ID}:role/cdk-*",
+                        f"arn:aws:iam::{ACCOUNT_ID}:role/{self.afa_stack_name}*",
+                        f"arn:aws:iam::{ACCOUNT_ID}:role/cdk-*-"
+                        f"{ACCOUNT_ID}-{Aws.REGION}",
+                        f"arn:aws:iam::{ACCOUNT_ID}:policy/{LAMBDAMAP_STACK_NAME}*",
+                        f"arn:aws:iam::{ACCOUNT_ID}:policy/{self.afa_stack_name}*",
                         f"arn:aws:lambda:*:{ACCOUNT_ID}:policy/{LAMBDAMAP_STACK_NAME}*",
+                        f"arn:aws:lambda:*:{ACCOUNT_ID}:policy/{self.afa_stack_name}*",
                     ],
                 ),
                 # CodeBuild logs
@@ -151,6 +160,7 @@ class BootstrapStack(Stack):
                     resources=[
                         f"arn:aws:lambda:{RACC}:function:"
                         f"{self.lambdamap_function_name.value_as_string}",
+                        f"arn:aws:lambda:{RACC}:function:{self.afa_stack_name}*",
                     ],
                 ),
                 # S3
@@ -177,6 +187,34 @@ class BootstrapStack(Stack):
                         "s3:DeleteBucketPolicy",
                     ],
                     resources=["arn:aws:s3:::cdk-*", "arn:aws:s3:::cdktoolkit-*"],
+                    conditions={
+                        "ForAllValues:StringEquals": {
+                            "aws:ResourceAccount": Aws.ACCOUNT_ID,
+                            "aws:SourceAccount": Aws.ACCOUNT_ID,
+                        }
+                    },
+                ),
+                # SageMaker
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "sagemaker:DescribeNotebookInstanceLifecycleConfig",
+                        "sagemaker:DeleteNotebookInstance",
+                        "sagemaker:StopNotebookInstance",
+                        "sagemaker:DescribeNotebookInstance",
+                        "sagemaker:CreateNotebookInstanceLifecycleConfig",
+                        "sagemaker:DeleteNotebookInstanceLifecycleConfig",
+                        "sagemaker:UpdateNotebookInstanceLifecycleConfig",
+                        "sagemaker:CreateNotebookInstance",
+                        "sagemaker:UpdateNotebookInstance",
+                        "sagemaker:addTags",
+                    ],
+                    resources=[
+                        f"arn:aws:sagemaker:{RACC}:notebook-instance/"
+                        f"{self.afa_stack_name.lower()}*",
+                        f"arn:aws:sagemaker:{RACC}:notebook-instance-lifecycle-config/"
+                        "notebooklifecycleconfig*",
+                    ],
                 ),
                 # ECR
                 iam.PolicyStatement(
@@ -225,10 +263,12 @@ class BootstrapStack(Stack):
                         }
                     },
                 ),
-                # STS
+                # EC2
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
-                    actions=["sts:GetCallerIdentity"],
+                    actions=[
+                        "ec2:DescribeAvailabilityZones",
+                    ],
                     resources=["*"],
                     conditions={
                         "ForAllValues:StringEquals": {
@@ -237,12 +277,10 @@ class BootstrapStack(Stack):
                         }
                     },
                 ),
-                # EC2
+                # STS
                 iam.PolicyStatement(
                     effect=iam.Effect.ALLOW,
-                    actions=[
-                        "ec2:DescribeAvailabilityZones",
-                    ],
+                    actions=["sts:GetCallerIdentity"],
                     resources=["*"],
                     conditions={
                         "ForAllValues:StringEquals": {
@@ -265,263 +303,22 @@ class BootstrapStack(Stack):
                         "ssm:RemoveTagsFromResource",
                         "ssm:UntagResource",
                     ],
-                    resources=[f"arn:aws:ssm:{RACC}:parameter/cdk-bootstrap/*"],
+                    resources=[f"arn:aws:ssm:{RACC}:parameter/cdk-bootstrap/*/version"],
                 ),
             ],
         )
 
-        lambdamap_policy.node.default_child.cfn_options.metadata = {
+        codebuild_policy.node.default_child.cfn_options.metadata = {
             "cfn_nag": {
                 "rules_to_suppress": [
-                    {"id": "W12", "reason": "These actions require '*' resources."},
+                    {"id": "W12", "reason": "Certain actions require '*' resources."},
                 ]
             }
         }
 
-        # afa codebuild policy
-        afa_policy = iam.Policy(
-            self,
-            "AfaCodeBuildPolicy",
-            roles=[self.codebuild_role],
-            statements=[
-                #
-                # CloudFormation
-                #
-                iam.PolicyStatement(
-                    effect=iam.Effect.ALLOW,
-                    actions=[
-                        "cloudformation:CreateChangeSet",
-                        "cloudformation:CreateStack",
-                        "cloudformation:DeleteStack",
-                        "cloudformation:DescribeStacks",
-                        "cloudformation:DescribeStackEvents",
-                        "cloudformation:DescribeChangeSet",
-                        "cloudformation:ListChangeSets",
-                        "cloudformation:ListStackResources",
-                        "cloudformation:TagResources",
-                        "cloudformation:UpdateStack",
-                        "cloudformation:GetTemplate",
-                        "cloudformation:ExecuteChangeSet",
-                        "cloudformation:DeleteChangeSet",
-                    ],
-                    resources=[
-                        f"arn:aws:cloudformation:{RACC}:stack/{self.afa_stack_name}*",
-                        f"arn:aws:cloudformation:{RACC}:stack/{Aws.STACK_NAME}/*",
-                        f"arn:aws:cloudformation:{RACC}:stack/CDKToolkit/*",
-                    ],
-                ),
-                # IAM
-                iam.PolicyStatement(
-                    effect=iam.Effect.ALLOW,
-                    actions=[
-                        "iam:DeletePolicy",
-                        "iam:CreateRole",
-                        "iam:AttachRolePolicy",
-                        "iam:PutRolePolicy",
-                        "iam:PassRole",
-                        "iam:DetachRolePolicy",
-                        "iam:DeleteRolePolicy",
-                        "iam:GetRole",
-                        "iam:GetPolicy",
-                        "iam:UpdateRoleDescription",
-                        "iam:DeleteRole",
-                        "iam:CreatePolicy",
-                        "iam:UpdateRole",
-                        "iam:GetRolePolicy",
-                        "iam:DeletePolicyVersion",
-                        "iam:TagRole",
-                        "iam:TagPolicy",
-                    ],
-                    resources=[
-                        f"arn:aws:iam::{ACCOUNT_ID}:role/{self.afa_stack_name}*",
-                        f"arn:aws:iam::{ACCOUNT_ID}:role/cdk-*-"
-                        f"{ACCOUNT_ID}-{Aws.REGION}",
-                        f"arn:aws:iam::{ACCOUNT_ID}:policy/{self.afa_stack_name}*",
-                        f"arn:aws:lambda:*:{ACCOUNT_ID}:policy/{self.afa_stack_name}*",
-                    ],
-                ),
-                # CodeBuild logs
-                iam.PolicyStatement(
-                    effect=iam.Effect.ALLOW,
-                    actions=[
-                        "logs:CreateLogStream",
-                    ],
-                    resources=[f"arn:aws:logs:{RACC}:log-group:/aws/codebuild/"],
-                ),
-                # Lambda
-                iam.PolicyStatement(
-                    effect=iam.Effect.ALLOW,
-                    actions=[
-                        "lambda:CreateFunction",
-                        "lambda:GetFunction",
-                        "lambda:ListTags",
-                        "lambda:UpdateFunctionCode",
-                        "lambda:TagResource",
-                    ],
-                    resources=[
-                        f"arn:aws:lambda:{RACC}:function:{self.afa_stack_name}*"
-                    ],
-                ),
-                # S3
-                iam.PolicyStatement(
-                    effect=iam.Effect.ALLOW,
-                    actions=[
-                        "s3:CreateBucket",
-                        "s3:GetObject*",
-                        "s3:PutObject*",
-                        "s3:ListBucket",
-                        "s3:GetBucketLocation",
-                    ],
-                    resources=["arn:aws:s3:::cdk-*", "arn:aws:s3:::cdktoolkit-*"],
-                ),
-                # SageMaker
-                iam.PolicyStatement(
-                    effect=iam.Effect.ALLOW,
-                    actions=[
-                        "sagemaker:DescribeNotebookInstanceLifecycleConfig",
-                        "sagemaker:DeleteNotebookInstance",
-                        "sagemaker:StopNotebookInstance",
-                        "sagemaker:DescribeNotebookInstance",
-                        "sagemaker:CreateNotebookInstanceLifecycleConfig",
-                        "sagemaker:DeleteNotebookInstanceLifecycleConfig",
-                        "sagemaker:UpdateNotebookInstanceLifecycleConfig",
-                        "sagemaker:CreateNotebookInstance",
-                        "sagemaker:UpdateNotebookInstance",
-                        "sagemaker:addTags",
-                    ],
-                    resources=[
-                        f"arn:aws:sagemaker:{RACC}:notebook-instance/"
-                        f"{self.afa_stack_name.lower()}*",
-                        f"arn:aws:sagemaker:{RACC}:notebook-instance-lifecycle-config/"
-                        "notebooklifecycleconfig*",
-                    ],
-                ),
-                # SNS
-                iam.PolicyStatement(
-                    effect=iam.Effect.ALLOW,
-                    actions=[
-                        "sns:CreateTopic",
-                        "sns:GetTopicAttributes",
-                        "sns:ListTagsForResource",
-                        "sns:TagResource",
-                    ],
-                    resources=[
-                        f"arn:aws:sns:{RACC}:{self.afa_stack_name}-NotificationTopic"
-                    ],
-                ),
-                # SSM
-                iam.PolicyStatement(
-                    effect=iam.Effect.ALLOW,
-                    actions=[
-                        "ssm:GetParameter",
-                        "ssm:GetParameters",
-                        "ssm:GetParametersByPath",
-                        "ssm:PutParameter",
-                        "ssm:ListTagsForResource",
-                        "ssm:AddTagsToResource",
-                        "ssm:RemoveTagsFromResource",
-                        "ssm:UntagResource",
-                        "ssm:DeleteParameter",
-                    ],
-                    resources=[
-                        f"arn:aws:ssm:{RACC}:parameter/AfaS3Bucket",
-                        f"arn:aws:ssm:{RACC}:parameter/AfaS3InputPath",
-                        f"arn:aws:ssm:{RACC}:parameter/AfaS3OutputPath",
-                        f"arn:aws:ssm:{RACC}:parameter/AfaAfcStateMachineArn",
-                        f"arn:aws:ssm:{RACC}:parameter/cdk-bootstrap/*",
-                    ],
-                ),
-                # Step Functions
-                iam.PolicyStatement(
-                    effect=iam.Effect.ALLOW,
-                    actions=[
-                        "states:CreateStateMachine",
-                        "states:DeleteStateMachine",
-                        "states:DescribeStateMachine",
-                        "states:ListTagsForResource",
-                        "states:TagResource",
-                        "states:UntagResource",
-                    ],
-                    resources=[
-                        f"arn:aws:states:{RACC}:stateMachine:{self.afa_stack_name}*",
-                    ],
-                ),
-                # ECR
-                iam.PolicyStatement(
-                    effect=iam.Effect.ALLOW,
-                    actions=[
-                        "ecr:BatchCheckLayerAvailability",
-                        "ecr:GetDownloadUrlForLayer",
-                        "ecr:GetRepositoryPolicy",
-                        "ecr:DescribeRepositories",
-                        "ecr:ListImages",
-                        "ecr:DescribeImages",
-                        "ecr:BatchGetImage",
-                        "ecr:GetLifecyclePolicy",
-                        "ecr:GetLifecyclePolicyPreview",
-                        "ecr:ListTagsForResource",
-                        "ecr:DescribeImageScanFindings",
-                        "ecr:InitiateLayerUpload",
-                        "ecr:UploadLayerPart",
-                        "ecr:CompleteLayerUpload",
-                        "ecr:PutImage",
-                        "ecr:SetRepositoryPolicy",
-                        "ecr:PutImageScanningConfiguration",
-                        "ecr:PutImageTagMutability",
-                        "ecr:DeleteRepository",
-                        "ecr:TagResource",
-                        "ecr:UntagResource",
-                    ],
-                    resources=[
-                        f"arn:aws:ecr:{RACC}:repository/cdk-*-"
-                        f"{ACCOUNT_ID}-{Aws.REGION}",
-                        f"arn:aws:ecr:{RACC}:repository/aws-cdk/assets",
-                    ],
-                ),
-                # STS
-                iam.PolicyStatement(
-                    effect=iam.Effect.ALLOW,
-                    actions=["sts:GetCallerIdentity"],
-                    resources=["*"],
-                    conditions={
-                        "ForAllValues:StringEquals": {
-                            "aws:ResourceAccount": Aws.ACCOUNT_ID,
-                            "aws:SourceAccount": Aws.ACCOUNT_ID,
-                        }
-                    },
-                ),
-                # EC2
-                iam.PolicyStatement(
-                    effect=iam.Effect.ALLOW,
-                    actions=[
-                        "ec2:DescribeAvailabilityZones",
-                    ],
-                    resources=["*"],
-                    conditions={
-                        "ForAllValues:StringEquals": {
-                            "aws:ResourceAccount": Aws.ACCOUNT_ID,
-                            "aws:SourceAccount": Aws.ACCOUNT_ID,
+        return codebuild_role
 
-                        }
-                    },
-                ),
-            ],
-        )
-
-        afa_policy.node.default_child.cfn_options.metadata = {
-            "cfn_nag": {
-                "rules_to_suppress": [
-                    {"id": "W12", "reason": "These actions require '*' resources."},
-                ]
-            }
-        }
-
-        self.make_codebuild_project(self.codebuild_role)
-        self.deploy_stacks()
-
-        return
-
-    def make_codebuild_project(self, codebuild_role):
+    def make_codebuild_project(self):
         """Make the codepieline project that does the nested deployment of the
         AfaStack and AfaLambdaMapStack.
 
@@ -564,7 +361,6 @@ class BootstrapStack(Stack):
             '   AFA_STACK_NAME=$AFA_STACK_NAME CDK_TAGS="$CDK_TAGS"',
         ]
 
-        # environment variables for the codebuild actions
         env_variables = {
             "LAMBDAMAP_BRANCH": codebuild.BuildEnvironmentVariable(
                 value=self.lambdamap_branch.value_as_string
@@ -589,8 +385,7 @@ class BootstrapStack(Stack):
             ),
         }
 
-        # codebuild project to deploy the AfaLambdaMapStack
-        self.deploy_stacks_project = codebuild.Project(
+        codebuild_project = codebuild.Project(
             self,
             "DeployStacksProject",
             environment=codebuild.BuildEnvironment(
@@ -610,10 +405,10 @@ class BootstrapStack(Stack):
                     },
                 }
             ),
-            role=codebuild_role,
+            role=self.codebuild_role,
         )
 
-        return
+        return codebuild_project
 
     def deploy_stacks(self):
         """ """
@@ -656,7 +451,7 @@ class BootstrapStack(Stack):
                     effect=iam.Effect.ALLOW,
                     actions=["codebuild:StartBuild"],
                     resources=[
-                        self.deploy_stacks_project.project_arn,
+                        self.codebuild_project.project_arn,
                     ],
                 ),
                 iam.PolicyStatement(
@@ -710,7 +505,7 @@ class BootstrapStack(Stack):
             code=lambda_.Code.from_inline(inline_lambda_str),
             handler="index.lambda_handler",
             environment={
-                "PROJECT_NAME": self.deploy_stacks_project.project_name,
+                "PROJECT_NAME": self.codebuild_project.project_name,
             },
             role=lambda_role,
         )
@@ -738,7 +533,7 @@ class BootstrapStack(Stack):
             self, "CustomResource", service_token=deploy_func.function_arn
         )
 
-        cust_resource.node.add_dependency(self.deploy_stacks_project)
+        cust_resource.node.add_dependency(self.codebuild_project)
 
         return
 
