@@ -347,6 +347,8 @@ class AfaStack(Stack):
             ],
         )
 
+        self.kms_key.grant_encrypt_decrypt(afc_role)
+
         iam.Policy(
             self,
             "AfcPolicy",
@@ -691,6 +693,7 @@ class AfaStack(Stack):
             parameter_name="AfaAfcStateMachineArn",
         )
 
+        # add cfn-nag linting exceptions
         for lm in self.lambdas:
             lm.node.default_child.cfn_options.metadata = {
                 "cfn_nag": {
