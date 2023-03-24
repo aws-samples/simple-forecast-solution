@@ -789,16 +789,8 @@ class AfaStack(Stack):
         CONDA_DIR=~/SageMaker/miniconda/
         source "$CONDA_DIR/bin/activate"
 
-        # make the custom conda environments available as kernels in the
-        # jupyter notebooks
-        for env in $CONDA_DIR/envs/* ; do
-            basename=$(basename "$env")
-            source activate "$basename"
-            python -m ipykernel install --user --name "$basename" \
-                --display-name "Custom ($basename)"
-        done
-
-        conda activate py39
+        conda activate $CONDA_DIR/envs/py39
+        conda install ipykernel
 
         # Get the notebook URL
         NOTEBOOK_URL=$(aws sagemaker describe-notebook-instance \
@@ -847,7 +839,7 @@ class AfaStack(Stack):
         pip install --use-deprecated=legacy-resolver -q --upgrade jupyter-server-proxy
 
         # restart the jupyterlab server
-        initctl restart jupyter-server --no-wait
+        systemctl restart jupyter-server
         """
         )
 
