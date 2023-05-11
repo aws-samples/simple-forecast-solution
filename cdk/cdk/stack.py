@@ -65,6 +65,7 @@ class AfaStack(Stack):
             removal_policy=core.RemovalPolicy.DESTROY,
             encryption=s3.BucketEncryption.S3_MANAGED,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            object_ownership=s3.ObjectOwnership.BUCKET_OWNER_PREFERRED
         )
 
         logs_bucket.node.default_child.cfn_options.metadata = {
@@ -83,6 +84,7 @@ class AfaStack(Stack):
             encryption=s3.BucketEncryption.S3_MANAGED,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             server_access_logs_bucket=logs_bucket,
+            object_ownership=s3.ObjectOwnership.BUCKET_OWNER_PREFERRED
         )
 
         #
