@@ -6,7 +6,7 @@ setuptools.setup(
     packages=["afa"],
     install_requires=[
         "statsmodels>=0.12.2",
-        "pandas>=1.2.4",
+        "pandas<2.0.0",
         "numpy==1.23.3",
         "scipy>=1.6.0",
         "tqdm",
