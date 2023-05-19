@@ -722,9 +722,11 @@ class AfaStack(Stack):
         script_str = dedent(
             f"""
         #!/bin/bash
+        set -x
 
         time sudo -u ec2-user -i <<'EOF'
         #!/bin/bash
+        set -x
         unset SUDO_UID
 
         # install miniconda into ~/SageMaker/miniconda, which will make it
@@ -825,12 +827,13 @@ class AfaStack(Stack):
         #
         nohup streamlit run --server.port 8501 \
             --theme.base light \
+            --server.headless true \
             --browser.gatherUsageStats false -- ./afa/app/app.py \
             --local-dir ~/SageMaker/ --landing-page-url $LANDING_PAGE_URL &
 
         # Send SNS email
         aws lambda invoke --function-name {sns_lambda_function_name} \
-            --payload '{{"landing_page_url": "'$LANDING_PAGE_URL'", "dashboard_url": "'$DASHBOARD_URL'"}}' /dev/stdout # noqa:E501,W605
+            --payload '{{"landing_page_url": "'$LANDING_PAGE_URL'", "dashboard_url": "'$DASHBOARD_URL'"}}' ./SnsEmailLambda.out # noqa:E501,W605
         EOF
 
         # install jupyter-server-proxy
