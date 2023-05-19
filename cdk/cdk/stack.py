@@ -746,8 +746,8 @@ class AfaStack(Stack):
         source "$CONDA_DIR/bin/activate"
 
         # install custom conda environment(s)
-        conda create -y -q -n py39 python=3.9 nodejs=16
-        conda activate py39
+        conda create -y -q -p $CONDA_DIR/envs/py39 python=3.9 nodejs=16
+        conda activate $CONDA_DIR/envs/py39
 
         # install the aws-cdk cli tool (req. for running `cdk deploy ...`)
         npm i -g aws-cdk@2.17.0
@@ -836,16 +836,6 @@ class AfaStack(Stack):
         aws lambda invoke --function-name {sns_lambda_function_name} \
             --payload '{{"landing_page_url": "'$LANDING_PAGE_URL'", "dashboard_url": "'$DASHBOARD_URL'"}}' ./SnsEmailLambda.out # noqa:E501,W605
         EOF
-
-        # install jupyter-server-proxy
-        source /home/ec2-user/anaconda3/bin/activate JupyterSystemEnv
-
-        pip install --use-deprecated=legacy-resolver --upgrade pip
-        pip uninstall -q --yes nbserverproxy || true
-        pip install --use-deprecated=legacy-resolver -q --upgrade jupyter-server-proxy
-
-        # restart the jupyterlab server
-        systemctl restart jupyter-server
         """
         )
 
