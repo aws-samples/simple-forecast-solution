@@ -144,6 +144,8 @@ class BootstrapStack(Stack):
                     effect=iam.Effect.ALLOW,
                     actions=[
                         "logs:CreateLogStream",
+                        "logs:CreateLogGroup",
+                        "logs:PutLogEvents"
                     ],
                     resources=[f"arn:aws:logs:{RACC}:log-group:/aws/codebuild/"],
                 ),

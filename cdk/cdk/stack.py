@@ -164,6 +164,7 @@ class AfaStack(Stack):
         )
 
         self.sns_lambda_role = sns_lambda_role
+        self.kms_key.grant_encrypt_decrypt(self.sns_lambda_role)
 
         sns_lambda = lambda_.Function(
             self,
