@@ -59,7 +59,7 @@ from awswrangler.exceptions import NoFilesFound
 from botocore.exceptions import ClientError
 from humanfriendly import format_timespan
 from joblib import Parallel, delayed
-from lambdamap import LambdaExecutor, LambdaFunction
+from lambdamap.lambdamap import LambdaExecutor, LambdaFunction
 from sspipe import px
 from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 from stqdm import stqdm
