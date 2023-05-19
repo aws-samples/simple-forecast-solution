@@ -721,8 +721,7 @@ class AfaStack(Stack):
         """Make the OnCreate script of the lifecycle configuration"""
 
         script_str = dedent(
-            f"""
-        #!/bin/bash
+            f"""#!/bin/bash
         set -x
 
         time sudo -u ec2-user -i <<'EOF'
@@ -783,11 +782,12 @@ class AfaStack(Stack):
         """Make the OnStart script of the lifecycle configuration."""
         # nosec below to ignore B608 as this is not an SQL query
         script_str = dedent(  # nosec
-            f"""
-        #!/bin/bash
+            f"""#!/bin/bash
+        set -x
 
         time sudo -u ec2-user -i <<'EOF'
         #!/bin/bash
+        set -x
         unset SUDO_UID
 
         # ensure that the local conda distribution is used
