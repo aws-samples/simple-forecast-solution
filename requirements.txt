@@ -1,7 +1,7 @@
 aws-cdk-lib==2.45.0
 constructs>=10.0.0,<11.0.0
 aws-sam-cli
-pandas
+'pandas<2.0.0'
 fsspec
 s3fs
 seaborn
