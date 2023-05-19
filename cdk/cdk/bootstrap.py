@@ -355,6 +355,7 @@ class BootstrapStack(Stack):
             "git clone $LAMBDAMAP_REPO_URL",
             "cd lambdamap/",
             "git checkout $LAMBDAMAP_BRANCH",
+            "pip install -q --use-deprecated=legacy-resolver -e .'\"",
             "pip install -r ./requirements.txt",
             'make deploy STACK_NAME=$LAMBDAMAP_STACK_NAME CDK_TAGS="$CDK_TAGS" '
             "FUNCTION_NAME=$LAMBDAMAP_FUNCTION_NAME "
