@@ -813,7 +813,7 @@ class AfaStack(Stack):
         cp -rp ./cdk/workspace/* $USER_DIR/SageMaker/
 
         # Update the url in the landing page
-        sed -i 's|INSERT_URL_HERE|https:\/\/'$DASHBOARD_URL'|' ~/SageMaker/Landing_Page.ipynb
+        sed -i 's|INSERT_URL_HERE|https:\/\/'$DASHBOARD_URL'|' /home/ec2-user/SageMaker/Landing_Page.ipynb
 
         export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 
