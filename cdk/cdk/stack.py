@@ -786,13 +786,9 @@ class AfaStack(Stack):
         #!/bin/bash
         set -x
 
-        time sudo -u ec2-user -i <<'EOF'
-        #!/bin/bash
-        set -x
-        unset SUDO_UID
-
         # ensure that the local conda distribution is used
-        CONDA_DIR=~/SageMaker/miniconda/
+        USER_DIR=/home/ec2-user
+        CONDA_DIR=$USER_DIR/SageMaker/miniconda/
         source "$CONDA_DIR/bin/activate"
 
         conda activate $CONDA_DIR/envs/py39
@@ -808,13 +804,13 @@ class AfaStack(Stack):
         # Get the instructions ipynb notebook URL (email to user)
         LANDING_PAGE_URL=https://$NOTEBOOK_URL/lab/tree/Landing_Page.ipynb
 
-        cd ~/SageMaker/simple-forecast-solution/
+        cd $USER_DIR/SageMaker/simple-forecast-solution/
 
         # update w/ the latest AFA code
         git reset --hard
         git pull --all
 
-        cp -rp ./cdk/workspace/* ~/SageMaker/
+        cp -rp ./cdk/workspace/* $USER_DIR/SageMaker/
 
         # Update the url in the landing page
         sed -i 's|INSERT_URL_HERE|https:\/\/'$DASHBOARD_URL'|' ~/SageMaker/Landing_Page.ipynb
@@ -827,16 +823,22 @@ class AfaStack(Stack):
         #
         # - https://<NOTEBOOK_URL>/proxy/8501/
         #
+        sudo -u ec2-user CONDA_DIR=$CONDA_DIR LANDING_PAGE_URL=$LANDING_PAGE_URL -i <<EOF
+        echo CONDA_DIR=$CONDA_DIR
+        echo LANDING_PAGE_URL=$LANDING_PAGE_URL
+        source $CONDA_DIR/bin/activate
+        conda activate $CONDA_DIR/envs/py39
+        cd ~/SageMaker/simple-forecast-solution/
         nohup streamlit run --server.port 8501 \
             --theme.base light \
             --server.headless true \
             --browser.gatherUsageStats false -- ./afa/app/app.py \
             --local-dir ~/SageMaker/ --landing-page-url $LANDING_PAGE_URL &
+        EOF
 
         # Send SNS email
         aws lambda invoke --function-name {sns_lambda_function_name} \
             --payload '{{"landing_page_url": "'$LANDING_PAGE_URL'", "dashboard_url": "'$DASHBOARD_URL'"}}' ./SnsEmailLambda.out # noqa:E501,W605
-        EOF
         """
         )
 
