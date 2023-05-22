@@ -758,13 +758,13 @@ class AfaStack(Stack):
         git clone https://github.com/aws-samples/simple-forecast-solution.git
         cd ./simple-forecast-solution ;
         git checkout {self.afa_branch.value_as_string}
-        pip install -q --use-deprecated=legacy-resolver -e .
+        pip install --use-deprecated=legacy-resolver -e .
 
         # install lambdamap (required by the dashboard code)
         git clone https://github.com/aws-samples/lambdamap.git
         cd ./lambdamap/
         git checkout {self.lambdamap_branch.value_as_string}
-        pip install -q --use-deprecated=legacy-resolver -e .
+        pip install --use-deprecated=legacy-resolver -e .
 
         EOF
         """
