@@ -721,7 +721,8 @@ class AfaStack(Stack):
         """Make the OnCreate script of the lifecycle configuration"""
 
         script_str = dedent(
-            f"""#!/bin/bash
+            f"""
+        #!/bin/bash
         set -x
 
         time sudo -u ec2-user -i <<'EOF'
@@ -765,14 +766,13 @@ class AfaStack(Stack):
         cd ./lambdamap/
         git checkout {self.lambdamap_branch.value_as_string}
         pip install --use-deprecated=legacy-resolver -e .
-
         EOF
         """
         )
 
         lcc = (
             sm.CfnNotebookInstanceLifecycleConfig.NotebookInstanceLifecycleHookProperty(
-                content=core.Fn.base64(script_str)
+                content=core.Fn.base64(script_str.lstrip())
             )
         )
 
@@ -782,7 +782,8 @@ class AfaStack(Stack):
         """Make the OnStart script of the lifecycle configuration."""
         # nosec below to ignore B608 as this is not an SQL query
         script_str = dedent(  # nosec
-            f"""#!/bin/bash
+            f"""
+        #!/bin/bash
         set -x
 
         time sudo -u ec2-user -i <<'EOF'
@@ -841,7 +842,7 @@ class AfaStack(Stack):
 
         lcc = (
             sm.CfnNotebookInstanceLifecycleConfig.NotebookInstanceLifecycleHookProperty(
-                content=core.Fn.base64(script_str)
+                content=core.Fn.base64(script_str.lstrip())
             )
         )
 
