@@ -254,7 +254,7 @@ class AfaStack(Stack):
                     ],
                     resources=[
                         f"arn:aws:sagemaker:{RACC}:notebook-instance/"
-                        f"{construct_id.lower()}*",
+                        f"{construct_id}*",
                         f"arn:aws:sagemaker:{RACC}:"
                         "notebook-instance-lifecycle-config/notebooklifecycleconfig*",
                     ],
