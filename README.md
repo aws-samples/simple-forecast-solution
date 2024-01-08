@@ -2,6 +2,14 @@
 
 ![](https://img.shields.io/badge/license-MIT--0-green)
 
+**⚠️ NOTE: This repository is no longer supported ⚠️**
+
+Please use:
+- [Amazon Forecast](https://aws.amazon.com/forecast/), for a low-code/no-code fully managed time series AI/ML forecasting service.
+- [AutoGluon](https://github.com/autogluon/autogluon), if you prefer more control over the forecasting model exploration, training, and evaluation processes.
+
+---
+
 **Amazon Forecast Accelerator (AFA)** is an open-source application that:
 
 - Enables users to run, test, and validate forecast accuracy in minutes rather than weeks,
