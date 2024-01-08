@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/badge/license-MIT--0-green)
 
-**⚠️ NOTE: This repository is no longer supported ⚠️**
+**⚠️ NOTE: This repository is no longer maintained ⚠️**
 
 Please use:
 - [Amazon Forecast](https://aws.amazon.com/forecast/), for a low-code/no-code fully managed time series AI/ML forecasting service.
